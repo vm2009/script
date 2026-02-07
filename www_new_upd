@@ -1,7 +1,6 @@
 --[[
-	WWW MENU + MINI WINDOW MODE (MOBILE OPTIMIZED)
-	F1 - Показать/Скрыть всё
-	F2 - InfJump | F3 - ClickTP | F4 - Noclip | F5 - Script#001 | F6 - Yield
+	WWW MENU (MOBILE OPTIMIZED)
+	F1 - Скрыть всё | F2 - InfJump | F4 - Noclip | F5 - Script#001 | F6 - Yield
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -54,10 +53,10 @@ local function toggleNoclipSystem(enabled)
 end
 
 -----------------------------------------------------------
--- 3. ОСНОВНОЙ ИНТЕРФЕЙС
+-- 3. ИНТЕРФЕЙС
 -----------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "WWW_Integrated_Menu"
+ScreenGui.Name = "WWW_Final_Optimized"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -65,19 +64,16 @@ ScreenGui.DisplayOrder = 999999999
 
 -- Главное окно
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 240) 
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -120)
+MainFrame.Size = UDim2.new(0, 260, 0, 250) 
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -125)
 MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 MainFrame.Active = true
-MainFrame.Draggable = true -- Для главного окна оставляем стандарт
+MainFrame.Draggable = true 
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(60, 60, 70)
 
-local border = Instance.new("UIStroke", MainFrame)
-border.Color = Color3.fromRGB(60, 60, 70)
-border.Thickness = 2
-
--- Мини-окно (Floating Mini-window)
+-- Мини-окно (W)
 local MiniFrame = Instance.new("TextButton")
 MiniFrame.Name = "MiniWindow"
 MiniFrame.Size = UDim2.new(0, 55, 0, 55)
@@ -90,11 +86,9 @@ MiniFrame.Draggable = true
 MiniFrame.Parent = ScreenGui
 Instance.new("UICorner", MiniFrame).CornerRadius = UDim.new(0, 10)
 
--- Радужная обводка мини-окна
 local miniBorder = Instance.new("UIStroke", MiniFrame)
 miniBorder.Thickness = 3
 
--- Светящаяся буква W
 local miniText = Instance.new("TextLabel")
 miniText.Size = UDim2.new(1, 0, 1, 0)
 miniText.BackgroundTransparency = 1
@@ -107,53 +101,86 @@ local miniGlow = Instance.new("UIStroke", miniText)
 miniGlow.Thickness = 1.5
 miniGlow.Transparency = 0.5
 
--- Title Bar
+-- Title Bar (Верхняя панель)
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.Size = UDim2.new(1, 0, 0, 40) -- Увеличил высоту до 40 для больших кнопок
 titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 titleBar.Parent = MainFrame
 Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 8)
 
 local titleText = Instance.new("TextLabel")
-titleText.Size = UDim2.new(1, -70, 1, 0)
+titleText.Size = UDim2.new(1, -100, 1, 0)
 titleText.Position = UDim2.new(0, 10, 0, 0)
 titleText.BackgroundTransparency = 1
 titleText.Text = "WWW MENU"
 titleText.TextColor3 = Color3.new(1,1,1)
 titleText.Font = Enum.Font.SourceSansBold
-titleText.TextSize = 16
+titleText.TextSize = 18
 titleText.TextXAlignment = Enum.TextXAlignment.Left
 titleText.Parent = titleBar
 
--- Кнопка Свернуть [-]
+-- КНОПКА СВЕРНУТЬ (ЖЕЛТАЯ)
 local minBtn = Instance.new("TextButton")
-minBtn.Size = UDim2.new(0, 20, 0, 20)
-minBtn.Position = UDim2.new(1, -50, 0, 5)
-minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+minBtn.Size = UDim2.new(0, 32, 0, 32) -- Сделал больше (было 20)
+minBtn.Position = UDim2.new(1, -75, 0, 4)
+minBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 0) -- Желтая
 minBtn.Text = "-"
-minBtn.TextColor3 = Color3.new(1,1,1)
+minBtn.Font = Enum.Font.SourceSansBold
+minBtn.TextSize = 25
+minBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 minBtn.Parent = titleBar
-Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 5)
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 8)
 
--- Кнопка Закрыть [X]
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 20, 0, 20)
-closeButton.Position = UDim2.new(1, -25, 0, 5)
-closeButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.new(1,1,1)
-closeButton.Parent = titleBar
-Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0, 10)
+-- КНОПКА ЗАКРЫТЬ (КРАСНАЯ)
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 32, 0, 32) -- Сделал больше
+closeBtn.Position = UDim2.new(1, -38, 0, 4)
+closeBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50) -- Красная
+closeBtn.Text = "X"
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.TextSize = 20
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Parent = titleBar
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
 
 local contentContainer = Instance.new("Frame")
-contentContainer.Size = UDim2.new(1, -20, 1, -40)
-contentContainer.Position = UDim2.new(0, 10, 0, 35)
+contentContainer.Size = UDim2.new(1, -20, 1, -50)
+contentContainer.Position = UDim2.new(0, 10, 0, 45)
 contentContainer.BackgroundTransparency = 1
 contentContainer.Parent = MainFrame
 
 -----------------------------------------------------------
--- 4. АНИМАЦИЯ РАДУГИ
+-- ЛОГИКА ПЕРЕКЛЮЧЕНИЯ И ДВИЖЕНИЯ
 -----------------------------------------------------------
+local function minimize()
+	MiniFrame.Position = MainFrame.Position
+	MainFrame.Visible = false
+	MiniFrame.Visible = true
+end
+
+local function maximize()
+	MainFrame.Position = MiniFrame.Position
+	MiniFrame.Visible = false
+	MainFrame.Visible = true
+end
+
+minBtn.MouseButton1Click:Connect(minimize)
+
+local touchStartTime = 0
+MiniFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		touchStartTime = tick()
+	end
+end)
+
+MiniFrame.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if (tick() - touchStartTime) < 0.4 then 
+			maximize()
+		end
+	end
+end)
+
 RunService.RenderStepped:Connect(function()
 	local hue = (tick() % 4) / 4 
 	local rainbowColor = Color3.fromHSV(hue, 1, 1)
@@ -163,44 +190,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -----------------------------------------------------------
--- 5. ЛОГИКА ПЕРЕКЛЮЧЕНИЯ (С СОХРАНЕНИЕМ ПОЗИЦИИ)
------------------------------------------------------------
-local function minimize()
-	MiniFrame.Position = MainFrame.Position -- Маленькое окно встает туда, где было большое
-	MainFrame.Visible = false
-	MiniFrame.Visible = true
-end
-
-local function maximize()
-	MainFrame.Position = MiniFrame.Position -- Большое меню открывается там, где ты оставил иконку
-	MiniFrame.Visible = false
-	MainFrame.Visible = true
-end
-
-minBtn.MouseButton1Click:Connect(minimize)
-
--- Логика нажатия на маленькое окно (Защита от случайного открытия при драге)
-local touchStartTime = 0
-
-MiniFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		touchStartTime = tick() -- Засекаем время начала нажатия
-	end
-end)
-
-MiniFrame.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		local duration = tick() - touchStartTime
-		if duration < 0.4 then -- Если нажатие было короче 0.4 сек, это клик (открываем)
-			maximize()
-		else
-			-- Если дольше — это был перетаскивание, ничего не делаем
-		end
-	end
-end)
-
------------------------------------------------------------
--- 6. КНОПКИ ФУНКЦИЙ
+-- КНОПКИ ФУНКЦИЙ
 -----------------------------------------------------------
 local function createToggle(label, posY, callback)
     local container = Instance.new("Frame")
@@ -216,9 +206,9 @@ local function createToggle(label, posY, callback)
     toggleLabel.BackgroundTransparency = 1
     toggleLabel.Text = label
     toggleLabel.TextColor3 = Color3.new(1,1,1)
-    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
     toggleLabel.Font = Enum.Font.SourceSansSemibold
     toggleLabel.TextSize = 15
+    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
     toggleLabel.Parent = container
     
     local toggleBg = Instance.new("TextButton")
@@ -238,7 +228,7 @@ local function createToggle(label, posY, callback)
 
     toggleBg.MouseButton1Click:Connect(function()
 		if label:find("Noclip") then
-			-- Обрабатывается через callback в nState
+			-- Обработка ноклипа через спец. стейт ниже
 		else
 			_G.infinjump = not _G.infinjump
 			updateVisuals(_G.infinjump)
@@ -273,9 +263,9 @@ local function createButton(label, posY, callback)
     btnLabel.BackgroundTransparency = 1
     btnLabel.Text = label
     btnLabel.TextColor3 = Color3.new(1,1,1)
-    btnLabel.TextXAlignment = Enum.TextXAlignment.Left
     btnLabel.Font = Enum.Font.SourceSansSemibold
     btnLabel.TextSize = 15
+    btnLabel.TextXAlignment = Enum.TextXAlignment.Left
     btnLabel.Parent = container
     
     local button = Instance.new("TextButton")
@@ -291,7 +281,7 @@ local function createButton(label, posY, callback)
 end
 
 -----------------------------------------------------------
--- ИНИЦИАЛИЗАЦИЯ
+-- ИНИЦИАЛИЗАЦИЯ ФУНКЦИЙ
 -----------------------------------------------------------
 local infJumpToggle = createToggle("Infinite Jump (F2)", 0, function(state) _G.infinjump = state end)
 local ctpToggle = createToggle("Click Teleport (F3)", 40, function() loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Click%20Teleport.txt"))() end)
@@ -300,7 +290,7 @@ createButton("Script #001 (F5)", 120, function() loadstring(game:HttpGet("https:
 createButton("Infinite Yield (F6)", 160, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))() end)
 
 -----------------------------------------------------------
--- 7. ОБРАБОТКА ГОРЯЧИХ КЛАВИШ
+-- HOTKEYS
 -----------------------------------------------------------
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
@@ -320,7 +310,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
-closeButton.MouseButton1Click:Connect(function()
+closeBtn.MouseButton1Click:Connect(function()
     if NoclipConnection then NoclipConnection:Disconnect() end
     _G.infinjump = false
     ScreenGui:Destroy()
