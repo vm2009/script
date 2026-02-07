@@ -1,11 +1,7 @@
 --[[
-	WWW MENU INTEGRATED
-	F1 - Скрыть/Показать меню
-	F2 - Infinite Jump (WeAreDevs Logic)
-	F3 - Click Teleport
-	F4 - Noclip
-	F5 - Script #001
-	F6 - Infinite Yield
+	WWW MENU + MINI WINDOW MODE (MOBILE OPTIMIZED)
+	F1 - Показать/Скрыть всё
+	F2 - InfJump | F3 - ClickTP | F4 - Noclip | F5 - Script#001 | F6 - Yield
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -13,19 +9,15 @@ local RunService = game:GetService("RunService")
 local Player = game.Players.LocalPlayer
 
 -----------------------------------------------------------
--- 1. ЛОГИКА WEAREDEVS INFINITE JUMP (БЕЗ ИЗМЕНЕНИЙ)
+-- 1. ЛОГИКА WEAREDEVS INFINITE JUMP
 -----------------------------------------------------------
--- Мы инициализируем переменную, если скрипт запущен впервые
 if _G.infinjump == nil then _G.infinjump = false end
-
 if _G.infinJumpStarted == nil then
 	_G.infinJumpStarted = true
-	
-	local plr = game:GetService('Players').LocalPlayer
-	
 	function doJump()
 		if _G.infinjump then
-			local humanoid = game:GetService'Players'.LocalPlayer.Character:FindFirstChildOfClass('Humanoid')
+			local character = Player.Character
+			local humanoid = character and character:FindFirstChildOfClass('Humanoid')
 			if humanoid then
 				humanoid:ChangeState('Jumping')
 				wait()
@@ -33,26 +25,7 @@ if _G.infinJumpStarted == nil then
 			end
 		end
 	end
-	
-	-- PC Support
-	local m = plr:GetMouse()
-	m.KeyDown:connect(function(k)
-		if k:byte() == 32 then
-			doJump()
-		end
-	end)
-	
-	-- Mobile support
-	local uis = game:GetService("UserInputService")
-	task.spawn(function()
-		local pg = plr:WaitForChild("PlayerGui")
-		local btn = pg:WaitForChild("TouchGui"):WaitForChild("TouchControlFrame"):WaitForChild("JumpButton", 3)
-		if btn then
-			btn.MouseButton1Down:Connect(doJump)
-		else
-			uis.JumpRequest:Connect(doJump)
-		end
-	end)
+	UserInputService.JumpRequest:Connect(doJump)
 end
 
 -----------------------------------------------------------
@@ -62,9 +35,7 @@ local NoclipConnection = nil
 local function noclipLoop()
     if Player.Character then
         for _, v in pairs(Player.Character:GetDescendants()) do
-            if v:IsA('BasePart') and v.CanCollide then
-                v.CanCollide = false
-            end
+            if v:IsA('BasePart') and v.CanCollide then v.CanCollide = false end
         end
     end
 end
@@ -83,28 +54,58 @@ local function toggleNoclipSystem(enabled)
 end
 
 -----------------------------------------------------------
--- 3. СОЗДАНИЕ ИНТЕРФЕЙСА (GUI)
+-- 3. ОСНОВНОЙ ИНТЕРФЕЙС
 -----------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MainScriptGui"
+ScreenGui.Name = "WWW_Integrated_Menu"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999999
 
+-- Главное окно
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 260, 0, 240) 
-MainFrame.Position = UDim2.new(0.7, 0, 0.5, 0)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -120)
 MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Draggable = true -- Для главного окна оставляем стандарт
 MainFrame.Parent = ScreenGui
-
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+
 local border = Instance.new("UIStroke", MainFrame)
 border.Color = Color3.fromRGB(60, 60, 70)
 border.Thickness = 2
+
+-- Мини-окно (Floating Mini-window)
+local MiniFrame = Instance.new("TextButton")
+MiniFrame.Name = "MiniWindow"
+MiniFrame.Size = UDim2.new(0, 55, 0, 55)
+MiniFrame.Position = UDim2.new(0.1, 0, 0.5, 0)
+MiniFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MiniFrame.Text = ""
+MiniFrame.Visible = false
+MiniFrame.Active = true
+MiniFrame.Draggable = true 
+MiniFrame.Parent = ScreenGui
+Instance.new("UICorner", MiniFrame).CornerRadius = UDim.new(0, 10)
+
+-- Радужная обводка мини-окна
+local miniBorder = Instance.new("UIStroke", MiniFrame)
+miniBorder.Thickness = 3
+
+-- Светящаяся буква W
+local miniText = Instance.new("TextLabel")
+miniText.Size = UDim2.new(1, 0, 1, 0)
+miniText.BackgroundTransparency = 1
+miniText.Text = "W"
+miniText.Font = Enum.Font.SourceSansBold
+miniText.TextSize = 45
+miniText.Parent = MiniFrame
+
+local miniGlow = Instance.new("UIStroke", miniText)
+miniGlow.Thickness = 1.5
+miniGlow.Transparency = 0.5
 
 -- Title Bar
 local titleBar = Instance.new("Frame")
@@ -114,15 +115,27 @@ titleBar.Parent = MainFrame
 Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 8)
 
 local titleText = Instance.new("TextLabel")
-titleText.Size = UDim2.new(1, -40, 1, 0)
+titleText.Size = UDim2.new(1, -70, 1, 0)
 titleText.Position = UDim2.new(0, 10, 0, 0)
 titleText.BackgroundTransparency = 1
 titleText.Text = "WWW MENU"
 titleText.TextColor3 = Color3.new(1,1,1)
 titleText.Font = Enum.Font.SourceSansBold
 titleText.TextSize = 16
+titleText.TextXAlignment = Enum.TextXAlignment.Left
 titleText.Parent = titleBar
 
+-- Кнопка Свернуть [-]
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 20, 0, 20)
+minBtn.Position = UDim2.new(1, -50, 0, 5)
+minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+minBtn.Text = "-"
+minBtn.TextColor3 = Color3.new(1,1,1)
+minBtn.Parent = titleBar
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 5)
+
+-- Кнопка Закрыть [X]
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 20, 0, 20)
 closeButton.Position = UDim2.new(1, -25, 0, 5)
@@ -139,7 +152,55 @@ contentContainer.BackgroundTransparency = 1
 contentContainer.Parent = MainFrame
 
 -----------------------------------------------------------
--- 4. ФУНКЦИИ ГЕНЕРАЦИИ КНОПОК
+-- 4. АНИМАЦИЯ РАДУГИ
+-----------------------------------------------------------
+RunService.RenderStepped:Connect(function()
+	local hue = (tick() % 4) / 4 
+	local rainbowColor = Color3.fromHSV(hue, 1, 1)
+	miniBorder.Color = rainbowColor
+	miniText.TextColor3 = rainbowColor
+	miniGlow.Color = rainbowColor
+end)
+
+-----------------------------------------------------------
+-- 5. ЛОГИКА ПЕРЕКЛЮЧЕНИЯ (С СОХРАНЕНИЕМ ПОЗИЦИИ)
+-----------------------------------------------------------
+local function minimize()
+	MiniFrame.Position = MainFrame.Position -- Маленькое окно встает туда, где было большое
+	MainFrame.Visible = false
+	MiniFrame.Visible = true
+end
+
+local function maximize()
+	MainFrame.Position = MiniFrame.Position -- Большое меню открывается там, где ты оставил иконку
+	MiniFrame.Visible = false
+	MainFrame.Visible = true
+end
+
+minBtn.MouseButton1Click:Connect(minimize)
+
+-- Логика нажатия на маленькое окно (Защита от случайного открытия при драге)
+local touchStartTime = 0
+
+MiniFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		touchStartTime = tick() -- Засекаем время начала нажатия
+	end
+end)
+
+MiniFrame.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		local duration = tick() - touchStartTime
+		if duration < 0.4 then -- Если нажатие было короче 0.4 сек, это клик (открываем)
+			maximize()
+		else
+			-- Если дольше — это был перетаскивание, ничего не делаем
+		end
+	end
+end)
+
+-----------------------------------------------------------
+-- 6. КНОПКИ ФУНКЦИЙ
 -----------------------------------------------------------
 local function createToggle(label, posY, callback)
     local container = Instance.new("Frame")
@@ -157,7 +218,7 @@ local function createToggle(label, posY, callback)
     toggleLabel.TextColor3 = Color3.new(1,1,1)
     toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
     toggleLabel.Font = Enum.Font.SourceSansSemibold
-    toggleLabel.TextSize = 16
+    toggleLabel.TextSize = 15
     toggleLabel.Parent = container
     
     local toggleBg = Instance.new("TextButton")
@@ -176,18 +237,16 @@ local function createToggle(label, posY, callback)
     end
 
     toggleBg.MouseButton1Click:Connect(function()
-        local newState = not _G.infinjump -- Используем именно твою переменную
-        if label:find("Noclip") then
-            -- Если это ноклип, обрабатываем отдельно
-        else
-            _G.infinjump = newState
-            updateVisuals(_G.infinjump)
-            callback(_G.infinjump)
-        end
+		if label:find("Noclip") then
+			-- Обрабатывается через callback в nState
+		else
+			_G.infinjump = not _G.infinjump
+			updateVisuals(_G.infinjump)
+			callback(_G.infinjump)
+		end
     end)
-    
-    -- Специальный костыль для ноклипа, чтобы использовать ту же функцию
-    if label:find("Noclip") then
+	
+	if label:find("Noclip") then
         local nState = false
         toggleBg.MouseButton1Click:Connect(function()
             nState = not nState
@@ -216,7 +275,7 @@ local function createButton(label, posY, callback)
     btnLabel.TextColor3 = Color3.new(1,1,1)
     btnLabel.TextXAlignment = Enum.TextXAlignment.Left
     btnLabel.Font = Enum.Font.SourceSansSemibold
-    btnLabel.TextSize = 16
+    btnLabel.TextSize = 15
     btnLabel.Parent = container
     
     local button = Instance.new("TextButton")
@@ -232,52 +291,30 @@ local function createButton(label, posY, callback)
 end
 
 -----------------------------------------------------------
--- 5. СОЗДАНИЕ ПУНКТОВ МЕНЮ
+-- ИНИЦИАЛИЗАЦИЯ
 -----------------------------------------------------------
-local infJumpToggle = createToggle("Infinite Jump (F2)", 0, function(state) 
-    _G.infinjump = state 
-end)
-
-local ctpToggle = createToggle("Click Teleport (F3)", 40, function(state)
-    loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Click%20Teleport.txt"))()
-end)
-
-local noclipToggle = createToggle("Noclip (F4)", 80, function(state)
-    toggleNoclipSystem(state)
-end)
-
-createButton("Script #001 (F5)", 120, function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))()
-end)
-
-createButton("Infinite Yield (F6)", 160, function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
-end)
+local infJumpToggle = createToggle("Infinite Jump (F2)", 0, function(state) _G.infinjump = state end)
+local ctpToggle = createToggle("Click Teleport (F3)", 40, function() loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Click%20Teleport.txt"))() end)
+local noclipToggle = createToggle("Noclip (F4)", 80, function(state) toggleNoclipSystem(state) end)
+createButton("Script #001 (F5)", 120, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))() end)
+createButton("Infinite Yield (F6)", 160, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))() end)
 
 -----------------------------------------------------------
--- 6. ОБРАБОТКА KEYBINDS (ГОРЯЧИЕ КЛАВИШИ)
+-- 7. ОБРАБОТКА ГОРЯЧИХ КЛАВИШ
 -----------------------------------------------------------
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
     if input.KeyCode == Enum.KeyCode.F1 then
-        MainFrame.Visible = not MainFrame.Visible
-        
+		if MainFrame.Visible then minimize() elseif MiniFrame.Visible then maximize() else MainFrame.Visible = true end
     elseif input.KeyCode == Enum.KeyCode.F2 then
         _G.infinjump = not _G.infinjump
         infJumpToggle.setEnabled(_G.infinjump)
-        
-    elseif input.KeyCode == Enum.KeyCode.F3 then
-        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Click%20Teleport.txt"))()
-        
     elseif input.KeyCode == Enum.KeyCode.F4 then
         local newState = not noclipToggle.getEnabled()
         noclipToggle.setEnabled(newState)
         toggleNoclipSystem(newState)
-        
     elseif input.KeyCode == Enum.KeyCode.F5 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))()
-        
     elseif input.KeyCode == Enum.KeyCode.F6 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
     end
@@ -288,5 +325,3 @@ closeButton.MouseButton1Click:Connect(function()
     _G.infinjump = false
     ScreenGui:Destroy()
 end)
-
-print("WWW Menu Loaded with WeAreDevs InfJump!")
