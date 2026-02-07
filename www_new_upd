@@ -1,0 +1,266 @@
+--[[
+	УПРАВЛЕНИЕ:
+	F1 - Скрыть меню | F2 - InfJump | F3 - ClickTP
+	F4 - NOCLIP | F5 - SCRIPT #001 | F6 - INF YIELD
+]]
+
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Player = game.Players.LocalPlayer
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MainScriptGui"
+ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999999
+
+-- Main Panel
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 260, 0, 240) 
+MainFrame.Position = UDim2.new(0.7, 0, 0.5, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+MainFrame.ZIndex = 10
+
+-- Panel design
+local border = Instance.new("UIStroke")
+border.Color = Color3.fromRGB(60, 60, 70)
+border.Thickness = 2
+border.Parent = MainFrame
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = MainFrame
+
+-- Title bar
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+titleBar.Parent = MainFrame
+titleBar.ZIndex = 11
+Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 8)
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1, -40, 1, 0)
+titleText.Position = UDim2.new(0, 10, 0, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "WWW MENU"
+titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.Font = Enum.Font.SourceSansBold
+titleText.TextSize = 16
+titleText.Parent = titleBar
+titleText.ZIndex = 12
+
+-- Close button
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 20, 0, 20)
+closeButton.Position = UDim2.new(1, -25, 0, 5)
+closeButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.Parent = titleBar
+closeButton.ZIndex = 12
+Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0, 10)
+
+-- Content container
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, -20, 1, -40)
+contentContainer.Position = UDim2.new(0, 10, 0, 35)
+contentContainer.BackgroundTransparency = 1
+contentContainer.Parent = MainFrame
+contentContainer.ZIndex = 11
+
+-----------------------------------------------------------
+-- NOCLIP SYSTEM
+-----------------------------------------------------------
+local NoclipConnection = nil
+local function noclipLoop()
+    if Player.Character then
+        for _, v in pairs(Player.Character:GetDescendants()) do
+            if v:IsA('BasePart') and v.CanCollide then
+                v.CanCollide = false
+            end
+        end
+    end
+end
+
+local function toggleNoclipSystem(enabled)
+    if enabled then
+        if not NoclipConnection then
+            NoclipConnection = RunService.Stepped:Connect(noclipLoop)
+        end
+    else
+        if NoclipConnection then
+            NoclipConnection:Disconnect()
+            NoclipConnection = nil
+        end
+        if Player.Character then
+            for _, v in pairs(Player.Character:GetDescendants()) do
+                if v:IsA('BasePart') then v.CanCollide = true end
+            end
+        end
+    end
+end
+
+-----------------------------------------------------------
+-- UI BUILDER FUNCTIONS
+-----------------------------------------------------------
+
+local function createToggle(label, posY, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 34)
+    container.Position = UDim2.new(0, 0, 0, posY)
+    container.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    container.Parent = contentContainer
+    container.ZIndex = 11
+    Instance.new("UICorner", container).CornerRadius = UDim.new(0, 6)
+    
+    local toggleLabel = Instance.new("TextLabel")
+    toggleLabel.Size = UDim2.new(0.6, 0, 1, 0)
+    toggleLabel.Position = UDim2.new(0, 10, 0, 0)
+    toggleLabel.BackgroundTransparency = 1
+    toggleLabel.Text = label
+    toggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    toggleLabel.Font = Enum.Font.SourceSansSemibold
+    toggleLabel.TextSize = 16
+    toggleLabel.Parent = container
+    
+    local toggleBg = Instance.new("TextButton")
+    toggleBg.Size = UDim2.new(0, 60, 0, 26)
+    toggleBg.Position = UDim2.new(1, -70, 0.5, -13)
+    toggleBg.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    toggleBg.Text = "OFF"
+    toggleBg.Font = Enum.Font.SourceSansBold
+    toggleBg.TextSize = 14
+    toggleBg.TextColor3 = Color3.new(1,1,1)
+    toggleBg.Parent = container
+    Instance.new("UICorner", toggleBg).CornerRadius = UDim.new(0, 13)
+    
+    local enabled = false
+    local function updateVisuals(value)
+        enabled = value
+        toggleBg.BackgroundColor3 = enabled and Color3.fromRGB(40, 180, 70) or Color3.fromRGB(150, 150, 150)
+        toggleBg.Text = enabled and "ON" or "OFF"
+    end
+
+    toggleBg.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        updateVisuals(enabled)
+        callback(enabled)
+    end)
+    
+    return {
+        setEnabled = function(value) updateVisuals(value) end,
+        getEnabled = function() return enabled end
+    }
+end
+
+local function createButton(label, posY, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 34)
+    container.Position = UDim2.new(0, 0, 0, posY)
+    container.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    container.Parent = contentContainer
+    Instance.new("UICorner", container).CornerRadius = UDim.new(0, 6)
+    
+    local btnLabel = Instance.new("TextLabel")
+    btnLabel.Size = UDim2.new(0.6, 0, 1, 0)
+    btnLabel.Position = UDim2.new(0, 10, 0, 0)
+    btnLabel.BackgroundTransparency = 1
+    btnLabel.Text = label
+    btnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnLabel.TextXAlignment = Enum.TextXAlignment.Left
+    btnLabel.Font = Enum.Font.SourceSansSemibold
+    btnLabel.TextSize = 16
+    btnLabel.Parent = container
+    
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 60, 0, 26)
+    button.Position = UDim2.new(1, -70, 0.5, -13)
+    button.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
+    button.Text = "RUN"
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.SourceSansBold
+    button.TextSize = 14
+    button.Parent = container
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
+    
+    button.MouseButton1Click:Connect(callback)
+end
+
+-----------------------------------------------------------
+-- ЭЛЕМЕНТЫ МЕНЮ (ПОРЯДОК: F2 -> F6)
+-----------------------------------------------------------
+
+-- F2: Infinite Jump
+local infJumpToggle = createToggle("Infinite Jump (F2)", 0, function(enabled)
+    loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Infinite%20Jump.txt"))()
+end)
+
+-- F3: Click Teleport
+local ctpToggle = createToggle("Click Teleport (F3)", 40, function(enabled)
+    loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Click%20Teleport.txt"))()
+end)
+
+-- F4: NOCLIP
+local noclipToggle = createToggle("Noclip (F4)", 80, function(enabled)
+    toggleNoclipSystem(enabled)
+end)
+
+-- F5: SCRIPT #001
+createButton("Script #001 (F5)", 120, function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))()
+end)
+
+-- F6: Infinite Yield
+createButton("Infinite Yield (F6)", 160, function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+end)
+
+-----------------------------------------------------------
+-- ОБРАБОТКА НАЖАТИЙ (KEYBINDS)
+-----------------------------------------------------------
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.F1 then
+        MainFrame.Visible = not MainFrame.Visible
+        
+    elseif input.KeyCode == Enum.KeyCode.F2 then
+        local s = not infJumpToggle.getEnabled()
+        infJumpToggle.setEnabled(s)
+        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Infinite%20Jump.txt"))()
+        
+    elseif input.KeyCode == Enum.KeyCode.F3 then
+        local s = not ctpToggle.getEnabled()
+        ctpToggle.setEnabled(s)
+        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Click%20Teleport.txt"))()
+        
+    elseif input.KeyCode == Enum.KeyCode.F4 then
+        -- NOCLIP ТЕПЕРЬ ТУТ
+        local newState = not noclipToggle.getEnabled()
+        noclipToggle.setEnabled(newState) 
+        toggleNoclipSystem(newState)
+        
+    elseif input.KeyCode == Enum.KeyCode.F5 then
+        -- SCRIPT #001 ТЕПЕРЬ ТУТ
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))()
+        
+    elseif input.KeyCode == Enum.KeyCode.F6 then
+        -- INFINITE YIELD ТЕПЕРЬ ТУТ
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    end
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+    if NoclipConnection then NoclipConnection:Disconnect() end
+    ScreenGui:Destroy()
+end)
+
+print("WWW Menu Loaded! F4-Noclip, F5-Script001, F6-Yield")
