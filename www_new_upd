@@ -1,6 +1,8 @@
 --[[
 	WWW MENU ULTIMATE (PC & ANDROID)
-	F1 - Fly | F2 - WeAreDevs InfJump | F3 - ClickTP | F4 - Noclip
+	- ОТКРЫТИЕ ПРИ ОТПУСКАНИИ (InputEnded)
+	- ЗАЩИТА ОТ ФАНТОМНЫХ СВАЙПОВ
+	- ЗАДЕРЖКА: 0.10 сек
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -21,7 +23,7 @@ local isSettingKey = false
 local toggles = {} 
 
 -----------------------------------------------------------
--- 1. ЛОГИКА ТЕЛЕПОРТА (CONTROL + CLICK)
+-- 1. ЛОГИКА ТЕЛЕПОРТА
 -----------------------------------------------------------
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
@@ -60,7 +62,7 @@ local function toggleNoclipSystem(state)
 end
 
 -----------------------------------------------------------
--- 3. СОЗДАНИЕ ИНТЕРФЕЙСА WWW
+-- 3. СОЗДАНИЕ ИНТЕРФЕЙСА
 -----------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "WWW_Ultimate_Hub"
@@ -68,21 +70,21 @@ ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Мини-окно "W"
+-- МИНИ-ОКНО "W"
 local MiniFrame = Instance.new("TextButton")
-MiniFrame.Size = UDim2.new(0, 55 * scale, 0, 55 * scale)
+MiniFrame.Size = UDim2.new(0, 75 * scale, 0, 75 * scale)
 MiniFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
 MiniFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MiniFrame.Text = "W"
 MiniFrame.TextColor3 = Color3.new(1, 1, 1)
 MiniFrame.Font = "SourceSansBold"
-MiniFrame.TextSize = 45 * scale
+MiniFrame.TextSize = 55 * scale
 MiniFrame.Visible = false
 MiniFrame.Active = true
 MiniFrame.Draggable = true
 MiniFrame.Parent = ScreenGui
-Instance.new("UICorner", MiniFrame)
-local miniStroke = Instance.new("UIStroke", MiniFrame); miniStroke.Thickness = 3
+Instance.new("UICorner", MiniFrame).CornerRadius = UDim.new(0, 12)
+local miniStroke = Instance.new("UIStroke", MiniFrame); miniStroke.Thickness = 4 * scale
 
 -- Главное окно
 local MainFrame = Instance.new("Frame")
@@ -107,7 +109,7 @@ bindBtn.Size = UDim2.new(0, 70 * scale, 0, 32 * scale); bindBtn.Position = UDim2
 if isMobile then bindBtn.Visible = false end
 
 local minBtn = Instance.new("TextButton", titleBar)
-minBtn.Size = UDim2.new(0, 32 * scale, 0, 32 * scale); minBtn.Position = UDim2.new(1, (isMobile and -80 or -75) * scale, 0, 6 * scale); minBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 0); minBtn.Text = "-"; minBtn.Font = "SourceSansBold"; minBtn.TextSize = 25 * scale; Instance.new("UICorner", minBtn)
+minBtn.Size = UDim2.new(0, 32 * scale, 0, 32 * scale); minBtn.Position = UDim2.new(1, -75 * scale, 0, 6 * scale); minBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 0); minBtn.Text = "-"; minBtn.Font = "SourceSansBold"; minBtn.TextSize = 25 * scale; Instance.new("UICorner", minBtn)
 
 local closeBtn = Instance.new("TextButton", titleBar)
 closeBtn.Size = UDim2.new(0, 32 * scale, 0, 32 * scale); closeBtn.Position = UDim2.new(1, -38 * scale, 0, 6 * scale); closeBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50); closeBtn.Text = "X"; closeBtn.TextColor3 = Color3.new(1,1,1); closeBtn.TextSize = 18 * scale; Instance.new("UICorner", closeBtn)
@@ -144,7 +146,7 @@ local function createRow(text, callback, isRun)
 end
 
 -----------------------------------------------------------
--- 5. ИНИЦИАЛИЗАЦИЯ
+-- 5. ИНИЦИАЛИЗАЦИЯ КНОПОК
 -----------------------------------------------------------
 toggles.Fly = createRow("Fly GUI (F1)", function(s) 
     if not flyLoaded then loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))() flyLoaded = true end
@@ -153,7 +155,6 @@ toggles.Fly = createRow("Fly GUI (F1)", function(s)
 end)
 
 toggles.InfJump = createRow("Infinite Jump (F2)", function(s) 
-    -- Запускаем внешний скрипт WeAreDevs (он сам переключается внутри)
     loadstring(game:HttpGet("https://obj.wearedevs.net/2/scripts/Infinite%20Jump.lua"))()
 end)
 
@@ -164,40 +165,74 @@ createRow("Script #001 (F5)", function() loadstring(game:HttpGet("https://raw.gi
 createRow("Infinite Yield (F6)", function() loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))() end, true)
 
 -----------------------------------------------------------
--- 6. КЛАВИШИ И ПЕРЕКЛЮЧЕНИЕ ОКОН
+-- 6. ЛОГИКА ПЕРЕКЛЮЧЕНИЯ ОКОН (ULTRA SMART)
 -----------------------------------------------------------
-local function minimize() MiniFrame.Position = MainFrame.Position; MainFrame.Visible = false; MiniFrame.Visible = true end
-local function maximize() MainFrame.Position = MiniFrame.Position; MainFrame.Visible = false; MainFrame.Visible = true end
-
-minBtn.MouseButton1Click:Connect(minimize)
-local touchStart = 0
-MiniFrame.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then touchStart = tick() end end)
-MiniFrame.InputEnded:Connect(function(i) if (tick()-touchStart) < 0.4 then maximize() end end)
-
-if not isMobile then
-    bindBtn.MouseButton1Click:Connect(function() isSettingKey = true; bindBtn.Text = "..." end)
+local function showMenu()
+    MiniFrame.Visible = false
+    MainFrame.Visible = true
 end
 
+local function showMini()
+    MainFrame.Visible = false
+    MiniFrame.Visible = true
+end
+
+minBtn.MouseButton1Click:Connect(function()
+    MiniFrame.Position = MainFrame.Position
+    showMini()
+end)
+
+-- Умная логика клика по Мини-окну
+local touchStartPos = Vector2.new(0,0)
+local touchStartTime = 0
+
+MiniFrame.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        touchStartTime = tick()
+        touchStartPos = Vector2.new(i.Position.X, i.Position.Y)
+    end
+end)
+
+MiniFrame.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        local duration = tick() - touchStartTime
+        local endPos = Vector2.new(i.Position.X, i.Position.Y)
+        local distance = (endPos - touchStartPos).Magnitude
+        
+        -- УСЛОВИЯ ОТКРЫТИЯ:
+        -- 1. Нажал и отпустил быстрее чем за 0.12 сек (очень быстрый тап)
+        -- 2. Палец почти не двигался (дистанция меньше 5 пикселей)
+        if duration < 0.12 and distance < 5 then 
+            MainFrame.Position = MiniFrame.Position
+            showMenu()
+        end
+    end
+end)
+
+-- ГОРЯЧИЕ КЛАВИШИ
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if isSettingKey and not isMobile then
         _G.MinimizeKey = input.KeyCode; bindBtn.Text = input.KeyCode.Name; isSettingKey = false; return
     end
     
-    -- Master Toggle
     if not isMobile and input.KeyCode == _G.MinimizeKey then
-        local vis = MainFrame.Visible or MiniFrame.Visible
-        MainFrame.Visible = not vis; MiniFrame.Visible = false
+        local isAnyVisible = MainFrame.Visible or MiniFrame.Visible
+        if isAnyVisible then
+            MainFrame.Visible = false
+            MiniFrame.Visible = false
+        else
+            MainFrame.Visible = true
+        end
         return
     end
     
     if input.KeyCode == Enum.KeyCode.F1 then
         local ns = not toggles.Fly.getState(); toggles.Fly.toggle(ns)
         if not flyLoaded then loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))() flyLoaded = true end
-        local fg = Player.PlayerGui:FindFirstChild("main") or Player.PlayerGui:FindFirstChild("FlyGui")
-        if fg then fg.Enabled = ns end
+        local flyFrame = Player.PlayerGui:FindFirstChild("main") or Player.PlayerGui:FindFirstChild("FlyGui")
+        if flyFrame then flyFrame.Enabled = ns end
     elseif input.KeyCode == Enum.KeyCode.F2 then
-        -- Синхронизируем статус и запускаем WeAreDevs
         local ns = not toggles.InfJump.getState(); toggles.InfJump.toggle(ns)
         loadstring(game:HttpGet("https://obj.wearedevs.net/2/scripts/Infinite%20Jump.lua"))()
     elseif input.KeyCode == Enum.KeyCode.F3 then
@@ -211,10 +246,17 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
--- Радуга для W
+-----------------------------------------------------------
+-- 7. ЭФФЕКТЫ И ЗАКРЫТИЕ
+-----------------------------------------------------------
 RunService.RenderStepped:Connect(function()
     local c = Color3.fromHSV((tick()%4)/4, 1, 1)
     miniStroke.Color = c; MiniFrame.TextColor3 = c
 end)
 
 closeBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+if not isMobile then
+    bindBtn.MouseButton1Click:Connect(function() isSettingKey = true; bindBtn.Text = "..." end)
+end
+
+showMenu()
