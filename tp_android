@@ -1,4 +1,4 @@
--- WWW Position Manager V11 (Rename Button & UI Sync)
+-- WWW Position Manager V11 (ONLY TP - Delta Optimized)
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -25,22 +25,33 @@ loadData()
 
 -- --- ИНТЕРФЕЙС ---
 local ScreenGui = Instance.new("ScreenGui", Player:WaitForChild("PlayerGui"))
-ScreenGui.Name = "WWW_PosManager_V11"
+ScreenGui.Name = "WWW_TP_Manager"
 ScreenGui.ResetOnSpawn = false
 
--- Мини-окно "W"
+-- МИНИ-ОКНО [TP]
 local MiniFrame = Instance.new("TextButton", ScreenGui)
-MiniFrame.Size = UDim2.new(0, 85 * scale, 0, 85 * scale)
+MiniFrame.Size = UDim2.new(0, 80 * scale, 0, 80 * scale)
 MiniFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
 MiniFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-MiniFrame.Text = "W"; MiniFrame.TextColor3 = Color3.new(1,1,1); MiniFrame.Font = "SourceSansBold"; MiniFrame.TextSize = 60 * scale
-MiniFrame.Visible = false; MiniFrame.Active = true; MiniFrame.Draggable = true
+MiniFrame.Text = "" -- Текст выводим через Label для обводки
+MiniFrame.Visible = false
+MiniFrame.Active = true
+MiniFrame.Draggable = true
 Instance.new("UICorner", MiniFrame).CornerRadius = UDim.new(0, 15)
-local miniStroke = Instance.new("UIStroke", MiniFrame); miniStroke.Thickness = 4 * scale
 
--- Главное окно
+local tpLabel = Instance.new("TextLabel", MiniFrame)
+tpLabel.Size = UDim2.new(1, 0, 1, 0)
+tpLabel.BackgroundTransparency = 1
+tpLabel.Text = "TP"
+tpLabel.TextColor3 = Color3.new(1, 1, 1) -- Белые буквы
+tpLabel.Font = "SourceSansBold"
+tpLabel.TextSize = 40 * scale
+local tpStroke = Instance.new("UIStroke", tpLabel) -- Радужная обводка
+tpStroke.Thickness = 2.5
+
+-- ГЛАВНОЕ ОКНО
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 360 * scale, 0, 320 * scale) -- Еще шире для кнопки Rename
+MainFrame.Size = UDim2.new(0, 360 * scale, 0, 340 * scale)
 MainFrame.Position = UDim2.new(0.5, -180 * scale, 0.4, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.Active = true; MainFrame.Draggable = true
@@ -71,7 +82,7 @@ local viewMain = Instance.new("Frame", MainFrame); viewMain.Size = UDim2.new(1,0
 local viewRecent = Instance.new("ScrollingFrame", MainFrame); viewRecent.Size = UDim2.new(1,0,1,-90 * scale); viewRecent.Position = UDim2.new(0,0,0,85 * scale); viewRecent.BackgroundTransparency = 1; viewRecent.Visible = false; viewRecent.ScrollBarThickness = 2; viewRecent.AutomaticCanvasSize = "Y"
 local viewSaved = Instance.new("ScrollingFrame", MainFrame); viewSaved.Size = UDim2.new(1,0,1,-90 * scale); viewSaved.Position = UDim2.new(0,0,0,85 * scale); viewSaved.BackgroundTransparency = 1; viewSaved.Visible = false; viewSaved.ScrollBarThickness = 2; viewSaved.AutomaticCanvasSize = "Y"
 
--- --- ВКЛАДКА INPUT (XYZ ВВЕРХУ) ---
+-- --- ВКЛАДКА INPUT (XYZ СВЕРХУ) ---
 local xyzContainer = Instance.new("Frame", viewMain)
 xyzContainer.Size = UDim2.new(0, 320 * scale, 0, 55 * scale); xyzContainer.Position = UDim2.new(0.5, -160 * scale, 0, 15 * scale); xyzContainer.BackgroundTransparency = 1
 
@@ -82,10 +93,10 @@ local function createXYZ(label, pos)
 end
 local inX, inY, inZ = createXYZ("X", 0), createXYZ("Y", 0.345), createXYZ("Z", 0.69)
 
-local tpBtn = Instance.new("TextButton", viewMain); tpBtn.Size = UDim2.new(0.9, 0, 0, 55 * scale); tpBtn.Position = UDim2.new(0.05, 0, 0, 85 * scale); tpBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255); tpBtn.Text = "Teleport to Input"; tpBtn.TextColor3 = Color3.new(1,1,1); tpBtn.Font = "SourceSansBold"; tpBtn.TextSize = 18 * scale; Instance.new("UICorner", tpBtn)
-local saveBtn = Instance.new("TextButton", viewMain); saveBtn.Size = UDim2.new(0.9, 0, 0, 55 * scale); saveBtn.Position = UDim2.new(0.05, 0, 0, 150 * scale); saveBtn.BackgroundColor3 = Color3.fromRGB(255, 105, 180); saveBtn.Text = "Save Position to Recent"; saveBtn.TextColor3 = Color3.new(1,1,1); saveBtn.Font = "SourceSansBold"; saveBtn.TextSize = 18 * scale; Instance.new("UICorner", saveBtn)
+local tpInBtn = Instance.new("TextButton", viewMain); tpInBtn.Size = UDim2.new(0.9, 0, 0, 55 * scale); tpInBtn.Position = UDim2.new(0.05, 0, 0, 85 * scale); tpInBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255); tpInBtn.Text = "Teleport to Input"; tpInBtn.TextColor3 = Color3.new(1,1,1); tpInBtn.Font = "SourceSansBold"; tpInBtn.TextSize = 18 * scale; Instance.new("UICorner", tpInBtn)
+local saveBtn = Instance.new("TextButton", viewMain); saveBtn.Size = UDim2.new(0.9, 0, 0, 55 * scale); saveBtn.Position = UDim2.new(0.05, 0, 0, 150 * scale); saveBtn.BackgroundColor3 = Color3.fromRGB(255, 105, 180); saveBtn.Text = "Save Current to Recent"; saveBtn.TextColor3 = Color3.new(1,1,1); saveBtn.Font = "SourceSansBold"; saveBtn.TextSize = 18 * scale; Instance.new("UICorner", saveBtn)
 
--- --- СПИСКИ С КНОПКОЙ RENAME ---
+-- --- СПИСКИ С СИНХРОНИЗАЦИЕЙ ---
 local function updateLists()
     for _, v in pairs(viewRecent:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
     for _, v in pairs(viewSaved:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
@@ -96,14 +107,9 @@ local function updateLists()
     for i, item in pairs(Data.recent) do
         if item.placeId == game.PlaceId and (tick() - item.time) < RECENT_EXPIRE then
             local row = Instance.new("Frame", viewRecent); row.Size = UDim2.new(0.96, 0, 0, 60 * scale); row.BackgroundColor3 = Color3.fromRGB(45,45,50); Instance.new("UICorner", row)
-            
-            -- Кнопка R (Rename) слева
             local renBtn = Instance.new("TextButton", row); renBtn.Size = UDim2.new(0.12, 0, 0.8, 0); renBtn.Position = UDim2.new(0, 6, 0.1, 0); renBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 200); renBtn.Text = "R"; renBtn.TextColor3 = Color3.new(1,1,1); renBtn.Font = "SourceSansBold"; renBtn.TextSize = 16 * scale; Instance.new("UICorner", renBtn)
 
-            local nameInp = Instance.new("TextBox", row); nameInp.Size = UDim2.new(0.35, 0, 0.5, 0); nameInp.Position = UDim2.new(0.15, 5, 0.1, 0); nameInp.Text = item.name or "Pos #"..i; nameInp.TextColor3 = Color3.new(1,1,1); nameInp.BackgroundTransparency = 1; nameInp.TextXAlignment = 0; nameInp.TextSize = 14 * scale; nameInp.Font = "SourceSansBold"; nameInp.ClearTextOnFocus = false
-            nameInp.FocusLost:Connect(function() item.name = nameInp.Text; saveData() end)
-            renBtn.MouseButton1Click:Connect(function() nameInp:CaptureFocus() end) -- Переименование по клику на R
-
+            local nameInp = Instance.new("TextBox", row); nameInp.Size = UDim2.new(0.35, 0, 0.5, 0); nameInp.Position = UDim2.new(0.15, 5, 0.1, 0); nameInp.Text = item.name or "Pos #"..i; nameInp.TextColor3 = Color3.new(1,1,1); nameInp.BackgroundTransparency = 1; nameInp.TextXAlignment = 0; nameInp.TextSize = 14 * scale; nameInp.Font = "SourceSansBold"; nameInp.ClearTextOnFocus = false; nameInp.FocusLost:Connect(function() item.name = nameInp.Text; saveData() end); renBtn.MouseButton1Click:Connect(function() nameInp:CaptureFocus() end)
             local sub = Instance.new("TextLabel", row); sub.Size = UDim2.new(0.35,0,0.3,0); sub.Position = UDim2.new(0.15,5,0.6, 0); sub.Text = math.floor(item.x)..","..math.floor(item.y)..","..math.floor(item.z); sub.TextColor3 = Color3.new(0.6,0.6,0.6); sub.BackgroundTransparency = 1; sub.TextXAlignment = 0; sub.TextSize = 10 * scale
 
             local function b(t, p, c, f)
@@ -118,15 +124,9 @@ local function updateLists()
     -- SAVED LIST
     for i, item in pairs(Data.saved) do
         local row = Instance.new("Frame", viewSaved); row.Size = UDim2.new(0.96, 0, 0, 60 * scale); row.BackgroundColor3 = Color3.fromRGB(55,55,65); Instance.new("UICorner", row)
-        
         local renBtn = Instance.new("TextButton", row); renBtn.Size = UDim2.new(0.12, 0, 0.8, 0); renBtn.Position = UDim2.new(0, 6, 0.1, 0); renBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 200); renBtn.Text = "R"; renBtn.TextColor3 = Color3.new(1,1,1); renBtn.Font = "SourceSansBold"; renBtn.TextSize = 16 * scale; Instance.new("UICorner", renBtn)
-
-        local nameInp = Instance.new("TextBox", row); nameInp.Size = UDim2.new(0.4, 0, 0.5, 0); nameInp.Position = UDim2.new(0.15, 5, 0.1, 0); nameInp.Text = item.name or "Point"; nameInp.TextColor3 = Color3.new(1,1,1); nameInp.BackgroundTransparency = 1; nameInp.TextXAlignment = 0; nameInp.TextSize = 14 * scale; nameInp.Font = "SourceSansBold"; nameInp.ClearTextOnFocus = false
-        nameInp.FocusLost:Connect(function() item.name = nameInp.Text; saveData() end)
-        renBtn.MouseButton1Click:Connect(function() nameInp:CaptureFocus() end)
-
+        local nameInp = Instance.new("TextBox", row); nameInp.Size = UDim2.new(0.4, 0, 0.5, 0); nameInp.Position = UDim2.new(0.15, 5, 0.1, 0); nameInp.Text = item.name or "Point"; nameInp.TextColor3 = Color3.new(1,1,1); nameInp.BackgroundTransparency = 1; nameInp.TextXAlignment = 0; nameInp.TextSize = 14 * scale; nameInp.Font = "SourceSansBold"; nameInp.ClearTextOnFocus = false; nameInp.FocusLost:Connect(function() item.name = nameInp.Text; saveData() end); renBtn.MouseButton1Click:Connect(function() nameInp:CaptureFocus() end)
         local sub = Instance.new("TextLabel", row); sub.Size = UDim2.new(0.4,0,0.3,0); sub.Position = UDim2.new(0.15,5,0.6, 0); sub.Text = math.floor(item.x)..","..math.floor(item.y)..","..math.floor(item.z); sub.TextColor3 = Color3.new(0.6,0.6,0.6); sub.BackgroundTransparency = 1; sub.TextXAlignment = 0; sub.TextSize = 10 * scale
-
         local function b(t, p, c, f)
             local btn = Instance.new("TextButton", row); btn.Size = UDim2.new(0.2,0,0.8,0); btn.Position = UDim2.new(p,0,0.1,0); btn.Text = t; btn.BackgroundColor3 = c; btn.TextColor3 = Color3.new(1,1,1); btn.Font = "SourceSansBold"; btn.TextSize = 16 * scale; Instance.new("UICorner", btn); btn.MouseButton1Click:Connect(f)
         end
@@ -136,7 +136,7 @@ local function updateLists()
 end
 
 -- --- ОБРАБОТКА ТЕЛЕПОРТА ---
-tpBtn.MouseButton1Click:Connect(function()
+tpInBtn.MouseButton1Click:Connect(function()
     local x, y, z = tonumber(inX.Text), tonumber(inY.Text), tonumber(inZ.Text)
     if x and y and z then
         Player.Character:MoveTo(Vector3.new(x, y, z))
@@ -179,5 +179,5 @@ btnRecent.MouseButton1Click:Connect(function() viewMain.Visible = false; viewRec
 btnSaved.MouseButton1Click:Connect(function() viewMain.Visible = false; viewRecent.Visible = false; viewSaved.Visible = true; updateLists() end)
 
 closeBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-RunService.RenderStepped:Connect(function() miniStroke.Color = Color3.fromHSV((tick()%4)/4, 1, 1); MiniFrame.TextColor3 = miniStroke.Color end)
+RunService.RenderStepped:Connect(function() tpStroke.Color = Color3.fromHSV((tick()%4)/4, 1, 1) end)
 updateLists()
