@@ -1,9 +1,9 @@
 --[[
-    UNIVERSAL YOUTH HUB [PERFECT DRAG EDITION]
-    - Smart MiniButton Logic (Tap vs Drag) from Old Script
-    - Anti-Spam Save Position
-    - Glass Design & Rounded Corners
-    - Instant Toggle (No Animations)
+    UNIVERSAL YOUTH HUB [SMART CLOSE EDITION]
+    - Red 'X' now disables cheats (Noclip, Fly, TP, Jump)
+    - Script #001 & Infinite Yield stay active
+    - Smart Drag (Remembers position)
+    - Anti-Spam Teleports
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -13,13 +13,19 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
+-- --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (ДЛЯ УПРАВЛЕНИЯ) ---
+_G.ClickTPEnabled = false
+_G.InfJumpEnabled = false
+local noclipConn = nil
+local flyLoaded = false
+
 -- --- НАСТРОЙКИ ---
 local isMobile = UserInputService.TouchEnabled
 local scale = isMobile and 0.9 or 1
 local Theme = {
     Bg = Color3.fromRGB(20, 20, 25),
     Element = Color3.fromRGB(35, 35, 40),
-    Accent = Color3.fromRGB(0, 110, 255), -- Синий
+    Accent = Color3.fromRGB(0, 110, 255),
     Text = Color3.fromRGB(240, 240, 240),
     Corner = UDim.new(0, 9)
 }
@@ -35,7 +41,7 @@ end
 
 -- --- GUI SETUP ---
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "YouthHub_Final_DragFix"
+ScreenGui.Name = "YouthHub_SmartClose"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -48,7 +54,7 @@ MainFrame.BackgroundColor3 = Theme.Bg
 MainFrame.BackgroundTransparency = 0.15
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- Большое окно можно таскать стандартно
+MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 Instance.new("UICorner", MainFrame).CornerRadius = Theme.Corner
@@ -64,7 +70,7 @@ TopBar.BackgroundColor3 = Theme.Element
 TopBar.BackgroundTransparency = 0.5
 TopBar.BorderSizePixel = 0
 Instance.new("UICorner", TopBar).CornerRadius = Theme.Corner
-local TopPatch = Instance.new("Frame", TopBar) -- Заплатка снизу
+local TopPatch = Instance.new("Frame", TopBar)
 TopPatch.Size = UDim2.new(1, 0, 0, 10)
 TopPatch.Position = UDim2.new(0, 0, 1, -10)
 TopPatch.BackgroundColor3 = Theme.Element
@@ -86,9 +92,10 @@ end
 local CloseBtn = mkWinBtn("X", Color3.fromRGB(200, 50, 50), -40)
 local MinBtn = mkWinBtn("-", Color3.fromRGB(220, 170, 40), -80)
 
--- МИНИ КНОПКА (ВАЖНО: Draggable = false, пишем свою логику)
+-- МИНИ КНОПКА (УМНАЯ ПОЗИЦИЯ)
 local MiniButton = Instance.new("TextButton")
 MiniButton.Size = UDim2.new(0, 50 * scale, 0, 50 * scale)
+MiniButton.Position = UDim2.new(0, 10, 0.5, -25) -- Старт слева
 MiniButton.BackgroundColor3 = Theme.Bg
 MiniButton.BackgroundTransparency = 0.2
 MiniButton.Text = "H"
@@ -97,10 +104,12 @@ MiniButton.Font = Enum.Font.GothamBlack
 MiniButton.TextSize = 24 * scale
 MiniButton.Visible = false
 MiniButton.Active = true
-MiniButton.Draggable = false -- ОТКЛЮЧАЕМ ВСТРОЕННЫЙ ДРАГ
+MiniButton.Draggable = false
 MiniButton.Parent = ScreenGui
 Instance.new("UICorner", MiniButton).CornerRadius = UDim.new(0, 12)
 Instance.new("UIStroke", MiniButton).Color = Theme.Accent
+
+local SavedMiniPos = MiniButton.Position 
 
 -- --- ВКЛАДКИ ---
 local SideBar = Instance.new("Frame", MainFrame)
@@ -132,7 +141,6 @@ local function CreateTab(txt, ord)
     b.Text = txt; b.Font = Enum.Font.GothamBold; b.TextSize = 14 * scale; b.AutoButtonColor = false
     b.BackgroundColor3 = Theme.Element; b.BackgroundTransparency = 0.8
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-    
     local p = Instance.new("Frame", PageContainer); p.Size = UDim2.new(1,0,1,0); p.BackgroundTransparency = 1; p.Visible = false
     tabs[txt] = {Button = b, Frame = p}
     b.MouseButton1Click:Connect(function() SwitchTab(txt) end)
@@ -171,23 +179,55 @@ local function AddBtn(txt, cb, tog)
     up(); b.MouseButton1Click:Connect(function() if tog then st = not st end up() cb(st) end)
 end
 
-local flyLoaded = false
-local noclipConn = nil
-local function toggleFly(state) if state and not flyLoaded then loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))() flyLoaded = true end local g=Player.PlayerGui:FindFirstChild("FlyGui") or Player.PlayerGui:FindFirstChild("main") if g then g.Enabled=state end end
-local function toggleNoclip(state) if state then noclipConn=RunService.Stepped:Connect(function() if Player.Character then for _,v in pairs(Player.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide=false end end end end) else if noclipConn then noclipConn:Disconnect() end end end
+-- LOGIC HANDLERS
+local function toggleFly(state) 
+    if state and not flyLoaded then 
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))() 
+        flyLoaded = true 
+    end 
+    local g = Player.PlayerGui:FindFirstChild("FlyGui") or Player.PlayerGui:FindFirstChild("main") 
+    if g then g.Enabled = state end 
+end
 
-_G.ClickTPEnabled = false
-UserInputService.InputBegan:Connect(function(i,g) if not g and _G.ClickTPEnabled and i.UserInputType==Enum.UserInputType.MouseButton1 then if (isMobile or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)) then Player.Character:MoveTo(Mouse.Hit.p) end end end)
+local function toggleNoclip(state) 
+    if state then 
+        noclipConn = RunService.Stepped:Connect(function() 
+            if Player.Character then 
+                for _,v in pairs(Player.Character:GetDescendants()) do 
+                    if v:IsA("BasePart") then v.CanCollide = false end 
+                end 
+            end 
+        end) 
+    else 
+        if noclipConn then noclipConn:Disconnect() end 
+    end 
+end
 
+-- CONTROL HANDLERS
+UserInputService.InputBegan:Connect(function(i,g) 
+    if not g and _G.ClickTPEnabled and i.UserInputType == Enum.UserInputType.MouseButton1 then 
+        if (isMobile or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)) then 
+            Player.Character:MoveTo(Mouse.Hit.p) 
+        end 
+    end 
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if _G.InfJumpEnabled and Player.Character then
+        Player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+    end
+end)
+
+-- BUTTON CONFIG
 AddBtn("Fly GUI (F1)", toggleFly, true)
-AddBtn("Infinite Jump (F2)", function() loadstring(game:HttpGet("https://obj.wearedevs.net/2/scripts/Infinite%20Jump.lua"))() end, true)
+AddBtn("Infinite Jump (F2)", function(s) _G.InfJumpEnabled = s end, true) -- Используем локальную логику для контроля
 AddBtn("Ctrl+Click TP (F3)", function(s) _G.ClickTPEnabled = s end, true)
 AddBtn("Noclip (F4)", toggleNoclip, true)
 AddBtn("Script #001 (F5)", function() loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))() end, false)
 AddBtn("Infinite Yield (F6)", function() loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))() end, false)
 
 -- ==========================================
--- PAGE 3: TELEPORTER (ANTI-SPAM)
+-- PAGE 3: TELEPORTER
 -- ==========================================
 local P_TP = CreateTab("Teleporter", 2)
 local TPData = {saved={}, recent={}}
@@ -202,7 +242,8 @@ local V_Sav = Instance.new("ScrollingFrame", P_TP); V_Sav.Size=UDim2.new(1,0,1,-
 
 local function SetSub(n) V_In.Visible=(n==1) V_Rec.Visible=(n==2) V_Sav.Visible=(n==3) end
 local function mkSub(t, p, id) 
-    local b=Instance.new("TextButton", SubTabs); b.Size=UDim2.new(0.32,0,1,0); b.Position=UDim2.new(p,0,0,0); b.Text=t; b.BackgroundColor3=Theme.Element; b.BackgroundTransparency=0.4; b.TextColor3=Color3.new(1,1,1); b.Font=Enum.Font.GothamBold; b.TextSize=12*scale
+    local b=Instance.new("TextButton", SubTabs); b.Size=UDim2.new(0.32,0,1,0); b.Position=UDim2.new(p,0,0,0)
+    b.Text=t; b.BackgroundColor3=Theme.Element; b.BackgroundTransparency=0.4; b.TextColor3=Color3.new(1,1,1); b.Font=Enum.Font.GothamBold; b.TextSize=12*scale
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
     b.MouseButton1Click:Connect(function() SetSub(id) end)
 end
@@ -261,18 +302,34 @@ end)
 upL()
 
 -- ==========================================
--- ЛОГИКА ОКНА + DRAG + TAP CHECK
+-- ЛОГИКА ОКНА (CLOSE & POSITION)
 -- ==========================================
 local function ToggleUI(vis)
     MainFrame.Visible = vis
     MiniButton.Visible = not vis
-    if not vis then MiniButton.Position = UDim2.new(0, MainFrame.AbsolutePosition.X, 0, MainFrame.AbsolutePosition.Y) end
+    if not vis then 
+        MiniButton.Position = SavedMiniPos -- Возврат на сохраненное место
+    end
 end
 
-MinBtn.MouseButton1Click:Connect(function() ToggleUI(false) end)
-CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+-- ЛОГИКА "X" (DEACTIVATE EVERYTHING)
+CloseBtn.MouseButton1Click:Connect(function()
+    -- 1. Disable Noclip
+    if noclipConn then noclipConn:Disconnect() end
+    -- 2. Disable Click TP
+    _G.ClickTPEnabled = false
+    -- 3. Disable Infinite Jump
+    _G.InfJumpEnabled = false
+    -- 4. Hide Fly GUI
+    local fly = Player.PlayerGui:FindFirstChild("FlyGui") or Player.PlayerGui:FindFirstChild("main")
+    if fly then fly.Enabled = false end
+    
+    -- 5. Destroy HUB
+    ScreenGui:Destroy()
+end)
 
--- КАСТОМНАЯ СИСТЕМА ДРАГА ДЛЯ МИНИ-КНОПКИ
+MinBtn.MouseButton1Click:Connect(function() ToggleUI(false) end)
+
 local dragging = false
 local dragStart, startPos
 local tapStartTime = 0
@@ -283,8 +340,6 @@ MiniButton.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos = MiniButton.Position
-        
-        -- Данные для проверки на "Клик"
         tapStartTime = tick()
         tapStartPos = Vector2.new(input.Position.X, input.Position.Y)
 
@@ -299,21 +354,22 @@ end)
 MiniButton.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
-        MiniButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        MiniButton.Position = newPos
+        SavedMiniPos = newPos -- ЗАПОМИНАЕМ НОВУЮ ПОЗИЦИЮ
     end
 end)
 
 MiniButton.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
-        
-        -- ЛОГИКА ТВОЕГО СТАРОГО СКРИПТА
         local duration = tick() - tapStartTime
         local dist = (Vector2.new(input.Position.X, input.Position.Y) - tapStartPos).Magnitude
         
-        -- Если нажал быстро (< 0.15с) И не двигал палец (< 5 пикселей), то это клик
         if duration < 0.15 and dist < 5 then
             ToggleUI(true)
+        else
+            SavedMiniPos = MiniButton.Position -- Сохраняем после перетаскивания
         end
     end
 end)
