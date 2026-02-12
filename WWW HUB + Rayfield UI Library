@@ -1,0 +1,316 @@
+--[[ 
+    UNIVERSAL YOUTH HUB [RAYFIELD EDITION + FINAL FIX]
+    - Noclip: Запускает loadstring и при включении, и при выключении.
+    - Убраны лишние уведомления (оставлены только встроенные в скрипт).
+    - F1-F6 работают стабильно.
+]] 
+
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local Mouse = Player:GetMouse()
+
+-- --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
+_G.ClickTPEnabled = false
+local flyLoaded = false
+
+-- --- ФУНКЦИЯ ЭКЗЕКУТОРА ---
+local function getExecutor()
+    if identifyexecutor then return identifyexecutor() end
+    if getexecutorname then return getexecutorname() end
+    if fluxus then return "Fluxus" end
+    if delta then return "Delta" end
+    return "Unknown System"
+end
+
+-- --- ЛОГИКА ФУНКЦИЙ ---
+
+-- Fly Logic
+local function toggleFlyLogic(state)
+    if state and not flyLoaded then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
+        flyLoaded = true
+    end
+    local g = Player.PlayerGui:FindFirstChild("FlyGui") or Player.PlayerGui:FindFirstChild("main")
+    if g then g.Enabled = state end
+end
+
+-- Noclip Logic (Запускается ВСЕГДА при переключении)
+local function toggleNoclipLogic(state)
+    -- Просто запускаем скрипт. Неважно, ON это или OFF.
+    -- Скрипт сам переключит режим и сам покажет уведомление.
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/no%20clip"))()
+end
+
+-- Infinite Jump
+local function toggleInfJumpLogic(state)
+    loadstring(game:HttpGet("https://obj.wearedevs.net/2/scripts/Infinite%20Jump.lua"))()
+end
+
+-- Логика Click TP
+UserInputService.InputBegan:Connect(function(i, gameProcessed)
+    if not gameProcessed and _G.ClickTPEnabled and i.UserInputType == Enum.UserInputType.MouseButton1 then
+        if UserInputService.TouchEnabled or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+                Player.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0))
+            end
+        end
+    end
+end)
+
+-- --- ЗАГРУЗКА СОХРАНЕНИЙ ТЕЛЕПОРТА ---
+local TPData = {saved = {}}
+local FNAME = "GlassHub_Ult.json"
+pcall(function()
+    if isfile(FNAME) then TPData = HttpService:JSONDecode(readfile(FNAME)) end
+end)
+local function saveD()
+    writefile(FNAME, HttpService:JSONEncode(TPData))
+end
+
+-- ==========================================
+-- ЗАГРУЗКА RAYFIELD UI
+-- ==========================================
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "UNIVERSAL YOUTH HUB",
+    LoadingTitle = "Youth Hub",
+    LoadingSubtitle = "by You",
+    ConfigurationSaving = {
+        Enabled = false,
+    },
+    Discord = {
+        Enabled = false,
+    },
+    KeySystem = false
+})
+
+-- ==========================================
+-- ВКЛАДКА 1: MAIN
+-- ==========================================
+local TabMain = Window:CreateTab("Main", 4483362458) 
+
+TabMain:CreateLabel("Welcome, " .. Player.DisplayName)
+TabMain:CreateLabel("Username: @" .. Player.Name)
+TabMain:CreateLabel("Executor: " .. getExecutor())
+
+TabMain:CreateSection("Information")
+TabMain:CreateParagraph({
+    Title = "Controls (PC)",
+    Content = "Right Ctrl / K : Toggle Menu\nF1 : Fly\nF2 : Infinite Jump\nF3 : Click TP\nF4 : Noclip (External)\nF5 : Script #001\nF6 : Infinite Yield"
+})
+
+-- ==========================================
+-- ВКЛАДКА 2: MENU
+-- ==========================================
+local TabMenu = Window:CreateTab("Menu", 4483345998) 
+
+-- СОХРАНЯЕМ ОБЪЕКТЫ КНОПОК В ПЕРЕМЕННЫЕ
+local FlyToggle = TabMenu:CreateToggle({
+    Name = "Fly GUI (F1)",
+    CurrentValue = false,
+    Flag = "TglFly", 
+    Callback = function(Value) toggleFlyLogic(Value) end,
+})
+
+local JumpToggle = TabMenu:CreateToggle({
+    Name = "Infinite Jump (F2)",
+    CurrentValue = false,
+    Flag = "TglJump",
+    Callback = function(Value) toggleInfJumpLogic(Value) end,
+})
+
+local ClickTPToggle = TabMenu:CreateToggle({
+    Name = "Ctrl+Click TP (F3)",
+    CurrentValue = false,
+    Flag = "TglClickTP",
+    Callback = function(Value) _G.ClickTPEnabled = Value end,
+})
+
+local NoclipToggle = TabMenu:CreateToggle({
+    Name = "Noclip (F4)",
+    CurrentValue = false,
+    Flag = "TglNoclip",
+    Callback = function(Value) 
+        -- Value здесь это true или false, но нам все равно.
+        -- Мы запускаем функцию, которая выполняет loadstring.
+        toggleNoclipLogic(Value) 
+    end,
+})
+
+TabMenu:CreateSection("Scripts")
+
+TabMenu:CreateButton({
+    Name = "Script #001 (F5)",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))()
+    end,
+})
+
+TabMenu:CreateButton({
+    Name = "Infinite Yield (F6)",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    end,
+})
+
+-- ==========================================
+-- ВКЛАДКА 3: TELEPORTER
+-- ==========================================
+local TabTP = Window:CreateTab("Teleporter", 4483362868) 
+
+local InputX, InputY, InputZ = 0, 0, 0
+
+TabTP:CreateSection("Manual Teleport")
+
+TabTP:CreateInput({
+    Name = "X Coordinate",
+    PlaceholderText = "Enter X...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text) InputX = tonumber(Text) or 0 end,
+})
+TabTP:CreateInput({
+    Name = "Y Coordinate",
+    PlaceholderText = "Enter Y...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text) InputY = tonumber(Text) or 0 end,
+})
+TabTP:CreateInput({
+    Name = "Z Coordinate",
+    PlaceholderText = "Enter Z...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text) InputZ = tonumber(Text) or 0 end,
+})
+
+TabTP:CreateButton({
+    Name = "🚀 Teleport to Coordinates",
+    Callback = function()
+        if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+            Player.Character.HumanoidRootPart.CFrame = CFrame.new(InputX, InputY, InputZ)
+        end
+    end,
+})
+
+TabTP:CreateSection("Saved Locations")
+
+local savedNames = {}
+for _, v in pairs(TPData.saved) do table.insert(savedNames, v.name) end
+if #savedNames == 0 then table.insert(savedNames, "No saved locations") end
+
+local selectedLocation = ""
+local DropdownTP = TabTP:CreateDropdown({
+    Name = "Select Location",
+    Options = savedNames,
+    CurrentOption = savedNames[1] or "",
+    MultipleOptions = false,
+    Flag = "DropdownTP",
+    Callback = function(Options)
+        selectedLocation = Options[1]
+    end,
+})
+
+local function refreshDropdown()
+    local newNames = {}
+    for _, v in pairs(TPData.saved) do table.insert(newNames, v.name) end
+    if #newNames == 0 then table.insert(newNames, "No saved locations") end
+    DropdownTP:Refresh(newNames)
+end
+
+TabTP:CreateButton({
+    Name = "✨ Teleport to Selected",
+    Callback = function()
+        for _, v in pairs(TPData.saved) do
+            if v.name == selectedLocation then
+                if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+                    Player.Character.HumanoidRootPart.CFrame = CFrame.new(v.x, v.y, v.z)
+                end
+                break
+            end
+        end
+    end,
+})
+
+TabTP:CreateButton({
+    Name = "💾 Save Current Position",
+    Callback = function()
+        if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+            local p = Player.Character.HumanoidRootPart.Position
+            local newName = "Pos: " .. math.floor(p.X) .. " " .. math.floor(p.Z)
+            table.insert(TPData.saved, {name = newName, x = p.X, y = p.Y, z = p.Z})
+            saveD()
+            refreshDropdown()
+            Rayfield:Notify({Title = "Saved!", Content = "Location saved: " .. newName, Duration = 3})
+        end
+    end,
+})
+
+TabTP:CreateButton({
+    Name = "🗑️ Delete Selected Position",
+    Callback = function()
+        for i, v in ipairs(TPData.saved) do
+            if v.name == selectedLocation then
+                table.remove(TPData.saved, i)
+                saveD()
+                refreshDropdown()
+                Rayfield:Notify({Title = "Deleted!", Content = "Location removed.", Duration = 3})
+                break
+            end
+        end
+    end,
+})
+
+-- ==========================================
+-- ИСПРАВЛЕННЫЕ ГОРЯЧИЕ КЛАВИШИ
+-- ==========================================
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    -- Проверка: печатаем ли мы в чат?
+    local isTyping = UserInputService:GetFocusedTextBox() ~= nil
+    if isTyping then return end
+    
+    -- ПРЯМОЕ ОБРАЩЕНИЕ К ПЕРЕМЕННЫМ КНОПОК
+    
+    if input.KeyCode == Enum.KeyCode.F1 then
+        -- Fly
+        if FlyToggle then
+            FlyToggle:Set(not FlyToggle.CurrentValue) 
+        end
+
+    elseif input.KeyCode == Enum.KeyCode.F2 then
+        -- Jump
+        if JumpToggle then
+            JumpToggle:Set(not JumpToggle.CurrentValue)
+        end
+
+    elseif input.KeyCode == Enum.KeyCode.F3 then
+        -- Click TP
+        if ClickTPToggle then
+            ClickTPToggle:Set(not ClickTPToggle.CurrentValue)
+        end
+
+    elseif input.KeyCode == Enum.KeyCode.F4 then
+        -- Noclip (Trigger Toggle)
+        if NoclipToggle then
+            NoclipToggle:Set(not NoclipToggle.CurrentValue)
+        end
+
+    elseif input.KeyCode == Enum.KeyCode.F5 then
+        -- Script 1 (Без UI элемента)
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))()
+        Rayfield:Notify({Title = "Hotkey F5", Content = "Script #001 Launched", Duration = 2})
+
+    elseif input.KeyCode == Enum.KeyCode.F6 then
+        -- Infinite Yield (Без UI элемента)
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+        Rayfield:Notify({Title = "Hotkey F6", Content = "Infinite Yield Launched", Duration = 2})
+    end
+end)
+
+Rayfield:Notify({
+    Title = "Youth Hub Loaded",
+    Content = "Press K to Toggle Menu. All Hotkeys Active.",
+    Duration = 5,
+    Image = 4483362458,
+})
