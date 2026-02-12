@@ -1,10 +1,9 @@
---[[
-    UNIVERSAL YOUTH HUB [SMART CLOSE EDITION]
-    - Red 'X' now disables cheats (Noclip, Fly, TP, Jump)
-    - Script #001 & Infinite Yield stay active
-    - Smart Drag (Remembers position)
-    - Anti-Spam Teleports
-]]
+--[[ 
+    UNIVERSAL YOUTH HUB [ANCHORED WINDOW]
+    - Window opens exactly where the MiniButton is located.
+    - MiniButton appears exactly where the Window was.
+    - F2 Logic: Switch (WeAreDevs Script)
+]] 
 
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -13,11 +12,12 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
--- --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (ДЛЯ УПРАВЛЕНИЯ) ---
+-- --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
 _G.ClickTPEnabled = false
-_G.InfJumpEnabled = false
 local noclipConn = nil
 local flyLoaded = false
+local isFlyActive = false
+local isNoclipActive = false
 
 -- --- НАСТРОЙКИ ---
 local isMobile = UserInputService.TouchEnabled
@@ -41,7 +41,7 @@ end
 
 -- --- GUI SETUP ---
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "YouthHub_SmartClose"
+ScreenGui.Name = "YouthHub_Anchored"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -49,7 +49,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 -- ГЛАВНОЕ ОКНО
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 520 * scale, 0, 360 * scale)
-MainFrame.Position = UDim2.new(0.5, -260 * scale, 0.5, -180 * scale)
+MainFrame.Position = UDim2.new(0.5, -260 * scale, 0.5, -180 * scale) -- Начальная позиция
 MainFrame.BackgroundColor3 = Theme.Bg
 MainFrame.BackgroundTransparency = 0.15
 MainFrame.BorderSizePixel = 0
@@ -70,6 +70,7 @@ TopBar.BackgroundColor3 = Theme.Element
 TopBar.BackgroundTransparency = 0.5
 TopBar.BorderSizePixel = 0
 Instance.new("UICorner", TopBar).CornerRadius = Theme.Corner
+
 local TopPatch = Instance.new("Frame", TopBar)
 TopPatch.Size = UDim2.new(1, 0, 0, 10)
 TopPatch.Position = UDim2.new(0, 0, 1, -10)
@@ -78,24 +79,36 @@ TopPatch.BackgroundTransparency = 1
 TopPatch.BorderSizePixel = 0
 
 local Title = Instance.new("TextLabel", TopBar)
-Title.Size = UDim2.new(0, 150, 1, 0); Title.Position = UDim2.new(0, 15, 0, 0); Title.BackgroundTransparency = 1
-Title.Text = "HUB"; Title.Font = Enum.Font.GothamBlack; Title.TextColor3 = Theme.Text; Title.TextSize = 18 * scale; Title.TextXAlignment = 0
+Title.Size = UDim2.new(0, 150, 1, 0); 
+Title.Position = UDim2.new(0, 15, 0, 0); 
+Title.BackgroundTransparency = 1
+Title.Text = "HUB"; 
+Title.Font = Enum.Font.GothamBlack; 
+Title.TextColor3 = Theme.Text; 
+Title.TextSize = 18 * scale; 
+Title.TextXAlignment = 0
 
 local function mkWinBtn(txt, col, off)
     local b = Instance.new("TextButton", TopBar)
-    b.Size = UDim2.new(0, 30*scale, 0, 30*scale); b.Position = UDim2.new(1, off*scale, 0.5, -15*scale)
-    b.BackgroundColor3 = col; b.BackgroundTransparency = 0.2
-    b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 14*scale
+    b.Size = UDim2.new(0, 30 * scale, 0, 30 * scale); 
+    b.Position = UDim2.new(1, off * scale, 0.5, -15 * scale)
+    b.BackgroundColor3 = col; 
+    b.BackgroundTransparency = 0.2
+    b.Text = txt; 
+    b.TextColor3 = Color3.new(1,1,1); 
+    b.Font = Enum.Font.GothamBold; 
+    b.TextSize = 14 * scale
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
     return b
 end
+
 local CloseBtn = mkWinBtn("X", Color3.fromRGB(200, 50, 50), -40)
 local MinBtn = mkWinBtn("-", Color3.fromRGB(220, 170, 40), -80)
 
--- МИНИ КНОПКА (УМНАЯ ПОЗИЦИЯ)
+-- МИНИ КНОПКА
 local MiniButton = Instance.new("TextButton")
 MiniButton.Size = UDim2.new(0, 50 * scale, 0, 50 * scale)
-MiniButton.Position = UDim2.new(0, 10, 0.5, -25) -- Старт слева
+MiniButton.Position = UDim2.new(0.5, -25 * scale, 0.05, 0) -- Начальная позиция
 MiniButton.BackgroundColor3 = Theme.Bg
 MiniButton.BackgroundTransparency = 0.2
 MiniButton.Text = "H"
@@ -104,19 +117,21 @@ MiniButton.Font = Enum.Font.GothamBlack
 MiniButton.TextSize = 24 * scale
 MiniButton.Visible = false
 MiniButton.Active = true
-MiniButton.Draggable = false
+MiniButton.Draggable = false -- Мы используем свой драг-скрипт ниже
 MiniButton.Parent = ScreenGui
 Instance.new("UICorner", MiniButton).CornerRadius = UDim.new(0, 12)
 Instance.new("UIStroke", MiniButton).Color = Theme.Accent
 
-local SavedMiniPos = MiniButton.Position 
-
 -- --- ВКЛАДКИ ---
 local SideBar = Instance.new("Frame", MainFrame)
-SideBar.Size = UDim2.new(0, 140 * scale, 1, -40 * scale); SideBar.Position = UDim2.new(0, 0, 0, 40 * scale); SideBar.BackgroundTransparency = 1
+SideBar.Size = UDim2.new(0, 140 * scale, 1, -40 * scale); 
+SideBar.Position = UDim2.new(0, 0, 0, 40 * scale); 
+SideBar.BackgroundTransparency = 1
 
 local PageContainer = Instance.new("Frame", MainFrame)
-PageContainer.Size = UDim2.new(1, -150 * scale, 1, -50 * scale); PageContainer.Position = UDim2.new(0, 145 * scale, 0, 45 * scale); PageContainer.BackgroundTransparency = 1
+PageContainer.Size = UDim2.new(1, -150 * scale, 1, -50 * scale); 
+PageContainer.Position = UDim2.new(0, 145 * scale, 0, 45 * scale); 
+PageContainer.BackgroundTransparency = 1
 
 local tabs = {}
 local function SwitchTab(name)
@@ -137,12 +152,22 @@ end
 
 local function CreateTab(txt, ord)
     local b = Instance.new("TextButton", SideBar)
-    b.Size = UDim2.new(0.9, 0, 0, 45 * scale); b.Position = UDim2.new(0.05, 0, 0, 10*scale + (ord*50*scale))
-    b.Text = txt; b.Font = Enum.Font.GothamBold; b.TextSize = 14 * scale; b.AutoButtonColor = false
-    b.BackgroundColor3 = Theme.Element; b.BackgroundTransparency = 0.8
+    b.Size = UDim2.new(0.9, 0, 0, 45 * scale); 
+    b.Position = UDim2.new(0.05, 0, 0, 10 * scale + (ord * 50 * scale))
+    b.Text = txt; 
+    b.Font = Enum.Font.GothamBold; 
+    b.TextSize = 14 * scale; 
+    b.AutoButtonColor = false
+    b.BackgroundColor3 = Theme.Element; 
+    b.BackgroundTransparency = 0.8
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-    local p = Instance.new("Frame", PageContainer); p.Size = UDim2.new(1,0,1,0); p.BackgroundTransparency = 1; p.Visible = false
+
+    local p = Instance.new("Frame", PageContainer); 
+    p.Size = UDim2.new(1,0,1,0); 
+    p.BackgroundTransparency = 1; 
+    p.Visible = false
     tabs[txt] = {Button = b, Frame = p}
+    
     b.MouseButton1Click:Connect(function() SwitchTab(txt) end)
     return p
 end
@@ -151,80 +176,186 @@ end
 -- PAGE 1: MAIN
 -- ==========================================
 local P_Main = CreateTab("Main", 0)
-local Av = Instance.new("ImageLabel", P_Main); Av.Size=UDim2.new(0,100*scale,0,100*scale); Av.Position=UDim2.new(0.5,-50*scale,0.1,0); Av.BackgroundTransparency=1; Av.Image="rbxthumb://type=AvatarHeadShot&id="..Player.UserId.."&w=420&h=420"
-Instance.new("UICorner", Av).CornerRadius = UDim.new(1, 0)
-Instance.new("UIStroke", Av).Color = Theme.Accent; Instance.new("UIStroke", Av).Thickness = 2; Instance.new("UIStroke", Av).Transparency = 0.3
 
-local function mkLbl(txt, sz, pos, col, font) local l = Instance.new("TextLabel", P_Main); l.Text=txt; l.TextSize=sz*scale; l.Position=pos; l.TextColor3=col; l.Font=font; l.Size=UDim2.new(1,0,0,sz*1.5*scale); l.BackgroundTransparency=1; return l end
+local Av = Instance.new("ImageLabel", P_Main); 
+Av.Size=UDim2.new(0,100 * scale,0,100 * scale); 
+Av.Position=UDim2.new(0.5,-50 * scale,0.1,0); 
+Av.BackgroundTransparency=1; 
+Av.Image="rbxthumb://type=AvatarHeadShot&id="..Player.UserId.."&w=420&h=420"
+Instance.new("UICorner", Av).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", Av).Color = Theme.Accent; 
+Instance.new("UIStroke", Av).Thickness = 2; 
+Instance.new("UIStroke", Av).Transparency = 0.3
+
+local function mkLbl(txt, sz, pos, col, font)
+    local l = Instance.new("TextLabel", P_Main); 
+    l.Text=txt; 
+    l.TextSize=sz * scale; 
+    l.Position=pos; 
+    l.TextColor3=col; 
+    l.Font=font; 
+    l.Size=UDim2.new(1,0,0,sz * 1.5 * scale); 
+    l.BackgroundTransparency=1; 
+    return l
+end
+
 mkLbl(Player.DisplayName, 20, UDim2.new(0,0,0.5,0), Theme.Text, Enum.Font.GothamBlack)
 mkLbl("@"..Player.Name, 15, UDim2.new(0,0,0.6,0), Color3.fromRGB(150,150,150), Enum.Font.Gotham)
 
-local ExecFrame = Instance.new("Frame", P_Main); ExecFrame.Size = UDim2.new(0.6, 0, 0, 35 * scale); ExecFrame.Position = UDim2.new(0.2, 0, 0.75, 0); ExecFrame.BackgroundColor3 = Theme.Element; ExecFrame.BackgroundTransparency = 0.4
-Instance.new("UICorner", ExecFrame).CornerRadius = UDim.new(0, 6); Instance.new("UIStroke", ExecFrame).Color = Theme.Accent; Instance.new("UIStroke", ExecFrame).Transparency = 0.5
-local ExecLbl = mkLbl(getExecutor(), 14, UDim2.new(0,0,0.15,0), Theme.Text, Enum.Font.GothamBold); ExecLbl.Parent = ExecFrame
+local ExecFrame = Instance.new("Frame", P_Main); 
+ExecFrame.Size = UDim2.new(0.6, 0, 0, 35 * scale); 
+ExecFrame.Position = UDim2.new(0.2, 0, 0.75, 0); 
+ExecFrame.BackgroundColor3 = Theme.Element; 
+ExecFrame.BackgroundTransparency = 0.4
+Instance.new("UICorner", ExecFrame).CornerRadius = UDim.new(0, 6); 
+Instance.new("UIStroke", ExecFrame).Color = Theme.Accent; 
+Instance.new("UIStroke", ExecFrame).Transparency = 0.5
+
+local ExecLbl = mkLbl(getExecutor(), 14, UDim2.new(0,0,0.15,0), Theme.Text, Enum.Font.GothamBold); 
+ExecLbl.Parent = ExecFrame
 
 -- ==========================================
 -- PAGE 2: MENU
 -- ==========================================
 local P_Menu = CreateTab("Menu", 1)
-local MenuList = Instance.new("Frame", P_Menu); MenuList.Size = UDim2.new(1, -10 * scale, 1, -10 * scale); MenuList.Position = UDim2.new(0, 5 * scale, 0, 5 * scale); MenuList.BackgroundTransparency = 1
+
+local MenuList = Instance.new("Frame", P_Menu); 
+MenuList.Size = UDim2.new(1, -10 * scale, 1, -10 * scale); 
+MenuList.Position = UDim2.new(0, 5 * scale, 0, 5 * scale); 
+MenuList.BackgroundTransparency = 1
 Instance.new("UIListLayout", MenuList).Padding = UDim.new(0, 8)
 
 local function AddBtn(txt, cb, tog)
-    local f = Instance.new("Frame", MenuList); f.Size = UDim2.new(1, 0, 0, 42 * scale); f.BackgroundColor3 = Theme.Element; f.BackgroundTransparency = 0.4; Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
-    local l = Instance.new("TextLabel", f); l.Text=txt; l.Size=UDim2.new(0.6,0,1,0); l.Position=UDim2.new(0,10,0,0); l.BackgroundTransparency=1; l.TextColor3=Theme.Text; l.TextXAlignment=0; l.Font=Enum.Font.GothamSemibold; l.TextSize=13*scale
-    local b = Instance.new("TextButton", f); b.Size=UDim2.new(0,70*scale,0,30*scale); b.Position=UDim2.new(1,-80*scale,0.5,-15*scale); b.Font=Enum.Font.GothamBold; b.TextSize=11*scale; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+    local f = Instance.new("Frame", MenuList); 
+    f.Size = UDim2.new(1, 0, 0, 42 * scale); 
+    f.BackgroundColor3 = Theme.Element; 
+    f.BackgroundTransparency = 0.4; 
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
+
+    local l = Instance.new("TextLabel", f); 
+    l.Text=txt; 
+    l.Size=UDim2.new(0.6,0,1,0); 
+    l.Position=UDim2.new(0,10,0,0); 
+    l.BackgroundTransparency=1; 
+    l.TextColor3=Theme.Text; 
+    l.TextXAlignment=0; 
+    l.Font=Enum.Font.GothamSemibold; 
+    l.TextSize=13 * scale
+
+    local b = Instance.new("TextButton", f); 
+    b.Size=UDim2.new(0,70 * scale,0,30 * scale); 
+    b.Position=UDim2.new(1,-80 * scale,0.5,-15 * scale); 
+    b.Font=Enum.Font.GothamBold; 
+    b.TextSize=11 * scale; 
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+
     local st = false
-    local function up() b.Text=tog and (st and "ON" or "OFF") or "RUN"; b.BackgroundColor3=st and Theme.Accent or Color3.fromRGB(50,50,60); b.BackgroundTransparency=st and 0.1 or 0.5; b.TextColor3=st and Color3.new(1,1,1) or Color3.new(0.7,0.7,0.7) end
-    up(); b.MouseButton1Click:Connect(function() if tog then st = not st end up() cb(st) end)
+    local function up()
+        if tog then
+            b.Text = st and "ON" or "OFF"
+            b.BackgroundColor3 = st and Theme.Accent or Color3.fromRGB(50,50,60)
+            b.BackgroundTransparency = st and 0.1 or 0.5
+            b.TextColor3 = st and Color3.new(1,1,1) or Color3.new(0.7,0.7,0.7)
+        else
+            b.Text = "RUN"; 
+            b.BackgroundColor3 = Theme.Accent; 
+            b.BackgroundTransparency = 0.1
+        end
+    end
+    up()
+
+    b.MouseButton1Click:Connect(function()
+        if tog then st = not st end
+        up()
+        cb(st)
+    end)
+
+    return {
+        toggle = function()
+            if tog then st = not st end
+            up()
+            cb(st)
+        end,
+        setState = function(val)
+            st=val
+            up()
+        end
+    }
 end
 
--- LOGIC HANDLERS
-local function toggleFly(state) 
-    if state and not flyLoaded then 
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))() 
-        flyLoaded = true 
-    end 
-    local g = Player.PlayerGui:FindFirstChild("FlyGui") or Player.PlayerGui:FindFirstChild("main") 
-    if g then g.Enabled = state end 
+-- LOGIC FUNCTIONS
+local function toggleFlyLogic(state)
+    isFlyActive = state
+    if state and not flyLoaded then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
+        flyLoaded = true
+    end
+    local g = Player.PlayerGui:FindFirstChild("FlyGui") or Player.PlayerGui:FindFirstChild("main")
+    if g then g.Enabled = state end
 end
 
-local function toggleNoclip(state) 
-    if state then 
-        noclipConn = RunService.Stepped:Connect(function() 
-            if Player.Character then 
-                for _,v in pairs(Player.Character:GetDescendants()) do 
-                    if v:IsA("BasePart") then v.CanCollide = false end 
-                end 
-            end 
-        end) 
-    else 
-        if noclipConn then noclipConn:Disconnect() end 
-    end 
+local function toggleNoclipLogic(state)
+    isNoclipActive = state
+    if state then
+        noclipConn = RunService.Stepped:Connect(function()
+            if Player.Character then
+                for _,v in pairs(Player.Character:GetDescendants()) do
+                    if v:IsA("BasePart") then v.CanCollide = false end
+                end
+            end
+        end)
+    else
+        if noclipConn then noclipConn:Disconnect() end
+    end
 end
 
--- CONTROL HANDLERS
-UserInputService.InputBegan:Connect(function(i,g) 
-    if not g and _G.ClickTPEnabled and i.UserInputType == Enum.UserInputType.MouseButton1 then 
-        if (isMobile or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)) then 
-            Player.Character:MoveTo(Mouse.Hit.p) 
-        end 
-    end 
-end)
+-- ЛОГИКА INF JUMP (WeAreDevs script)
+local function toggleInfJumpLogic(state)
+    loadstring(game:HttpGet("https://obj.wearedevs.net/2/scripts/Infinite%20Jump.lua"))()
+end
 
-UserInputService.JumpRequest:Connect(function()
-    if _G.InfJumpEnabled and Player.Character then
-        Player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+-- Click TP Logic
+UserInputService.InputBegan:Connect(function(i,g)
+    if not g and _G.ClickTPEnabled and i.UserInputType == Enum.UserInputType.MouseButton1 then
+        if (isMobile or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)) then
+            Player.Character:MoveTo(Mouse.Hit.p)
+        end
     end
 end)
 
--- BUTTON CONFIG
-AddBtn("Fly GUI (F1)", toggleFly, true)
-AddBtn("Infinite Jump (F2)", function(s) _G.InfJumpEnabled = s end, true) -- Используем локальную логику для контроля
-AddBtn("Ctrl+Click TP (F3)", function(s) _G.ClickTPEnabled = s end, true)
-AddBtn("Noclip (F4)", toggleNoclip, true)
-AddBtn("Script #001 (F5)", function() loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))() end, false)
-AddBtn("Infinite Yield (F6)", function() loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))() end, false)
+-- BUTTON CREATION
+local FlyBtn = AddBtn("Fly GUI (F1)", toggleFlyLogic, true)
+local JumpBtn = AddBtn("Infinite Jump (F2)", toggleInfJumpLogic, true) 
+local TpBtn = AddBtn("Ctrl+Click TP (F3)", function(s) _G.ClickTPEnabled = s end, true)
+local NcBtn = AddBtn("Noclip (F4)", toggleNoclipLogic, true)
+local Sc1Btn = AddBtn("Script #001 (F5)", function() 
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))() 
+end, false)
+local IyBtn = AddBtn("Infinite Yield (F6)", function() 
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))() 
+end, false)
+
+-- ГОРЯЧИЕ КЛАВИШИ
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.F1 then
+        FlyBtn.toggle()
+    elseif input.KeyCode == Enum.KeyCode.F2 then
+        JumpBtn.toggle() 
+    elseif input.KeyCode == Enum.KeyCode.F3 then
+        TpBtn.toggle()
+    elseif input.KeyCode == Enum.KeyCode.F4 then
+        NcBtn.toggle()
+    elseif input.KeyCode == Enum.KeyCode.F5 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))()
+    elseif input.KeyCode == Enum.KeyCode.F6 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    elseif input.KeyCode == Enum.KeyCode.RightControl then
+        local isVis = MainFrame.Visible
+        ToggleUI(not isVis)
+    end
+end)
 
 -- ==========================================
 -- PAGE 3: TELEPORTER
@@ -232,52 +363,172 @@ AddBtn("Infinite Yield (F6)", function() loadstring(game:HttpGet("https://raw.gi
 local P_TP = CreateTab("Teleporter", 2)
 local TPData = {saved={}, recent={}}
 local FNAME = "GlassHub_Ult.json"
-pcall(function() if isfile(FNAME) then TPData = HttpService:JSONDecode(readfile(FNAME)) end end)
-local function saveD() writefile(FNAME, HttpService:JSONEncode(TPData)) end
 
-local SubTabs = Instance.new("Frame", P_TP); SubTabs.Size=UDim2.new(1,0,0,35*scale); SubTabs.BackgroundTransparency=1
-local V_In = Instance.new("Frame", P_TP); V_In.Size=UDim2.new(1,0,1,-40*scale); V_In.Position=UDim2.new(0,0,0,40*scale); V_In.BackgroundTransparency=1
-local V_Rec = Instance.new("ScrollingFrame", P_TP); V_Rec.Size=UDim2.new(1,0,1,-40*scale); V_Rec.Position=UDim2.new(0,0,0,40*scale); V_Rec.BackgroundTransparency=1; V_Rec.Visible=false; V_Rec.AutomaticCanvasSize="Y"; V_Rec.ScrollBarThickness=3
-local V_Sav = Instance.new("ScrollingFrame", P_TP); V_Sav.Size=UDim2.new(1,0,1,-40*scale); V_Sav.Position=UDim2.new(0,0,0,40*scale); V_Sav.BackgroundTransparency=1; V_Sav.Visible=false; V_Sav.AutomaticCanvasSize="Y"; V_Sav.ScrollBarThickness=3
+pcall(function()
+    if isfile(FNAME) then TPData = HttpService:JSONDecode(readfile(FNAME)) end
+end)
 
-local function SetSub(n) V_In.Visible=(n==1) V_Rec.Visible=(n==2) V_Sav.Visible=(n==3) end
-local function mkSub(t, p, id) 
-    local b=Instance.new("TextButton", SubTabs); b.Size=UDim2.new(0.32,0,1,0); b.Position=UDim2.new(p,0,0,0)
-    b.Text=t; b.BackgroundColor3=Theme.Element; b.BackgroundTransparency=0.4; b.TextColor3=Color3.new(1,1,1); b.Font=Enum.Font.GothamBold; b.TextSize=12*scale
+local function saveD()
+    writefile(FNAME, HttpService:JSONEncode(TPData))
+end
+
+local SubTabs = Instance.new("Frame", P_TP); 
+SubTabs.Size=UDim2.new(1,0,0,35 * scale); 
+SubTabs.BackgroundTransparency=1
+
+local V_In = Instance.new("Frame", P_TP); 
+V_In.Size=UDim2.new(1,0,1,-40 * scale); 
+V_In.Position=UDim2.new(0,0,0,40 * scale); 
+V_In.BackgroundTransparency=1
+
+local V_Rec = Instance.new("ScrollingFrame", P_TP); 
+V_Rec.Size=UDim2.new(1,0,1,-40 * scale); 
+V_Rec.Position=UDim2.new(0,0,0,40 * scale); 
+V_Rec.BackgroundTransparency=1; 
+V_Rec.Visible=false; 
+V_Rec.AutomaticCanvasSize="Y"; 
+V_Rec.ScrollBarThickness=3
+
+local V_Sav = Instance.new("ScrollingFrame", P_TP); 
+V_Sav.Size=UDim2.new(1,0,1,-40 * scale); 
+V_Sav.Position=UDim2.new(0,0,0,40 * scale); 
+V_Sav.BackgroundTransparency=1; 
+V_Sav.Visible=false; 
+V_Sav.AutomaticCanvasSize="Y"; 
+V_Sav.ScrollBarThickness=3
+
+local function SetSub(n)
+    V_In.Visible=(n==1)
+    V_Rec.Visible=(n==2)
+    V_Sav.Visible=(n==3)
+end
+
+local function mkSub(t, p, id)
+    local b=Instance.new("TextButton", SubTabs); 
+    b.Size=UDim2.new(0.32,0,1,0); 
+    b.Position=UDim2.new(p,0,0,0)
+    b.Text=t; 
+    b.BackgroundColor3=Theme.Element; 
+    b.BackgroundTransparency=0.4; 
+    b.TextColor3=Color3.new(1,1,1); 
+    b.Font=Enum.Font.GothamBold; 
+    b.TextSize=12 * scale
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
     b.MouseButton1Click:Connect(function() SetSub(id) end)
 end
+
 mkSub("INPUT",0,1); mkSub("RECENT",0.34,2); mkSub("SAVED",0.68,3)
 
-local function mkIn(ph,p) 
-    local t=Instance.new("TextBox", V_In); t.Size=UDim2.new(0.32,0,0,50*scale); t.Position=UDim2.new(p,0,0,15)
-    t.BackgroundColor3=Theme.Element; t.BackgroundTransparency=0.4; t.PlaceholderText=ph; t.Text=""; t.TextColor3=Color3.new(1,1,1); t.Font=Enum.Font.GothamBold; t.TextSize=18*scale; Instance.new("UICorner", t).CornerRadius = UDim.new(0, 6); return t 
+local function mkIn(ph,p)
+    local t=Instance.new("TextBox", V_In); 
+    t.Size=UDim2.new(0.32,0,0,50 * scale); 
+    t.Position=UDim2.new(p,0,0,15)
+    t.BackgroundColor3=Theme.Element; 
+    t.BackgroundTransparency=0.4; 
+    t.PlaceholderText=ph; 
+    t.Text=""; 
+    t.TextColor3=Color3.new(1,1,1); 
+    t.Font=Enum.Font.GothamBold; 
+    t.TextSize=18 * scale; 
+    Instance.new("UICorner", t).CornerRadius = UDim.new(0, 6); 
+    return t
 end
+
 local iX, iY, iZ = mkIn("X",0), mkIn("Y",0.34), mkIn("Z",0.68)
-local bTP = Instance.new("TextButton", V_In); bTP.Size=UDim2.new(1,0,0,50*scale); bTP.Position=UDim2.new(0,0,0,80*scale); bTP.Text="TELEPORT"; bTP.BackgroundColor3=Theme.Accent; bTP.BackgroundTransparency=0.1; bTP.TextColor3=Color3.new(1,1,1); bTP.Font=Enum.Font.GothamBlack; bTP.TextSize=15*scale; Instance.new("UICorner", bTP).CornerRadius=UDim.new(0, 6)
-local bSv = Instance.new("TextButton", V_In); bSv.Size=UDim2.new(1,0,0,50*scale); bSv.Position=UDim2.new(0,0,0,140*scale); bSv.Text="SAVE POS"; bSv.BackgroundColor3=Color3.fromRGB(200,80,120); bSv.BackgroundTransparency=0.1; bSv.TextColor3=Color3.new(1,1,1); bSv.Font=Enum.Font.GothamBlack; bSv.TextSize=15*scale; Instance.new("UICorner", bSv).CornerRadius=UDim.new(0, 6)
+
+local bTP = Instance.new("TextButton", V_In); 
+bTP.Size=UDim2.new(1,0,0,50 * scale); 
+bTP.Position=UDim2.new(0,0,0,80 * scale); 
+bTP.Text="TELEPORT"; 
+bTP.BackgroundColor3=Theme.Accent; 
+bTP.BackgroundTransparency=0.1; 
+bTP.TextColor3=Color3.new(1,1,1); 
+bTP.Font=Enum.Font.GothamBlack; 
+bTP.TextSize=15 * scale; 
+Instance.new("UICorner", bTP).CornerRadius=UDim.new(0, 6)
+
+local bSv = Instance.new("TextButton", V_In); 
+bSv.Size=UDim2.new(1,0,0,50 * scale); 
+bSv.Position=UDim2.new(0,0,0,140 * scale); 
+bSv.Text="SAVE POS"; 
+bSv.BackgroundColor3=Color3.fromRGB(200,80,120); 
+bSv.BackgroundTransparency=0.1; 
+bSv.TextColor3=Color3.new(1,1,1); 
+bSv.Font=Enum.Font.GothamBlack; 
+bSv.TextSize=15 * scale; 
+Instance.new("UICorner", bSv).CornerRadius=UDim.new(0, 6)
 
 local function upL()
     for _,v in pairs(V_Rec:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
     for _,v in pairs(V_Sav:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
-    Instance.new("UIListLayout", V_Rec).Padding=UDim.new(0,6); Instance.new("UIListLayout", V_Sav).Padding=UDim.new(0,6)
+    Instance.new("UIListLayout", V_Rec).Padding=UDim.new(0,6); 
+    Instance.new("UIListLayout", V_Sav).Padding=UDim.new(0,6)
+
     local function draw(list, item, i, isSaved)
-        local f = Instance.new("Frame", list); f.Size=UDim2.new(1,0,0,50*scale); f.BackgroundColor3=Theme.Element; f.BackgroundTransparency=0.4; Instance.new("UICorner", f).CornerRadius=UDim.new(0,6)
-        local l = Instance.new("TextLabel", f); l.Text=item.name; l.Size=UDim2.new(0.5,0,1,0); l.Position=UDim2.new(0.03,0,0,0); l.BackgroundTransparency=1; l.TextColor3=Color3.new(1,1,1); l.TextXAlignment=0; l.Font=Enum.Font.GothamSemibold; l.TextSize=13*scale
-        local go = Instance.new("TextButton", f); go.Size=UDim2.new(0,50*scale,0,34*scale); go.Position=UDim2.new(0.58,0,0.5,-17*scale); go.Text="TP"; go.BackgroundColor3=Theme.Accent; go.TextColor3=Color3.new(1,1,1); Instance.new("UICorner", go).CornerRadius=UDim.new(0,5)
-        local del = Instance.new("TextButton", f); del.Size=UDim2.new(0,35*scale,0,34*scale); del.Position=UDim2.new(1,-40*scale,0.5,-17*scale); del.Text="X"; del.BackgroundColor3=Color3.fromRGB(200,60,60); del.TextColor3=Color3.new(1,1,1); Instance.new("UICorner", del).CornerRadius=UDim.new(0,5)
+        local f = Instance.new("Frame", list); 
+        f.Size=UDim2.new(1,0,0,50 * scale); 
+        f.BackgroundColor3=Theme.Element; 
+        f.BackgroundTransparency=0.4; 
+        Instance.new("UICorner", f).CornerRadius=UDim.new(0,6)
+
+        local l = Instance.new("TextLabel", f); 
+        l.Text=item.name; 
+        l.Size=UDim2.new(0.5,0,1,0); 
+        l.Position=UDim2.new(0.03,0,0,0); 
+        l.BackgroundTransparency=1; 
+        l.TextColor3=Color3.new(1,1,1); 
+        l.TextXAlignment=0; 
+        l.Font=Enum.Font.GothamSemibold; 
+        l.TextSize=13 * scale
+
+        local go = Instance.new("TextButton", f); 
+        go.Size=UDim2.new(0,50 * scale,0,34 * scale); 
+        go.Position=UDim2.new(0.58,0,0.5,-17 * scale); 
+        go.Text="TP"; 
+        go.BackgroundColor3=Theme.Accent; 
+        go.TextColor3=Color3.new(1,1,1); 
+        Instance.new("UICorner", go).CornerRadius=UDim.new(0,5)
+
+        local del = Instance.new("TextButton", f); 
+        del.Size=UDim2.new(0,35 * scale,0,34 * scale); 
+        del.Position=UDim2.new(1,-40 * scale,0.5,-17 * scale); 
+        del.Text="X"; 
+        del.BackgroundColor3=Color3.fromRGB(200,60,60); 
+        del.TextColor3=Color3.new(1,1,1); 
+        Instance.new("UICorner", del).CornerRadius=UDim.new(0,5)
+
         if not isSaved then
-            local add = Instance.new("TextButton", f); add.Size=UDim2.new(0,35*scale,0,34*scale); add.Position=UDim2.new(0.58,55*scale,0.5,-17*scale); add.Text="+"; add.BackgroundColor3=Color3.fromRGB(80,200,80); add.TextColor3=Color3.new(1,1,1); Instance.new("UICorner", add).CornerRadius=UDim.new(0,5)
-            add.MouseButton1Click:Connect(function() table.insert(TPData.saved, item); saveD(); upL() end)
+            local add = Instance.new("TextButton", f); 
+            add.Size=UDim2.new(0,35 * scale,0,34 * scale); 
+            add.Position=UDim2.new(0.58,55 * scale,0.5,-17 * scale); 
+            add.Text="+"; 
+            add.BackgroundColor3=Color3.fromRGB(80,200,80); 
+            add.TextColor3=Color3.new(1,1,1); 
+            Instance.new("UICorner", add).CornerRadius=UDim.new(0,5)
+            add.MouseButton1Click:Connect(function()
+                table.insert(TPData.saved, item); saveD(); upL()
+            end)
         end
-        go.MouseButton1Click:Connect(function() if Player.Character then Player.Character:MoveTo(Vector3.new(item.x,item.y,item.z)) end end)
-        del.MouseButton1Click:Connect(function() table.remove(isSaved and TPData.saved or TPData.recent, i); saveD(); upL() end)
+
+        go.MouseButton1Click:Connect(function()
+            if Player.Character then Player.Character:MoveTo(Vector3.new(item.x,item.y,item.z)) end
+        end)
+        del.MouseButton1Click:Connect(function()
+            table.remove(isSaved and TPData.saved or TPData.recent, i); saveD(); upL()
+        end)
     end
+
     for i,v in pairs(TPData.recent) do draw(V_Rec, v, i, false) end
     for i,v in pairs(TPData.saved) do draw(V_Sav, v, i, true) end
 end
 
-local function isDuplicate(pos) if #TPData.recent == 0 then return false end local last = TPData.recent[1] local dist = (Vector3.new(last.x, last.y, last.z) - pos).Magnitude return dist < 1 end
+local function isDuplicate(pos)
+    if #TPData.recent == 0 then return false end
+    local last = TPData.recent[1]
+    local dist = (Vector3.new(last.x, last.y, last.z) - pos).Magnitude
+    return dist < 1
+end
+
 bTP.MouseButton1Click:Connect(function()
     local x,y,z = tonumber(iX.Text), tonumber(iY.Text), tonumber(iZ.Text)
     if x and y and z then
@@ -289,9 +540,14 @@ bTP.MouseButton1Click:Connect(function()
         end
     end
 end)
+
 bSv.MouseButton1Click:Connect(function()
     if Player.Character then
-        local p = Player.Character.HumanoidRootPart.Position; iX.Text=tostring(math.floor(p.X)); iY.Text=tostring(math.floor(p.Y)); iZ.Text=tostring(math.floor(p.Z))
+        local p = Player.Character.HumanoidRootPart.Position; 
+        iX.Text=tostring(math.floor(p.X)); 
+        iY.Text=tostring(math.floor(p.Y)); 
+        iZ.Text=tostring(math.floor(p.Z))
+
         if not isDuplicate(p) then
             table.insert(TPData.recent, 1, {name="Saved: "..math.floor(p.X).." "..math.floor(p.Z), x=p.X,y=p.Y,z=p.Z})
             if #TPData.recent>15 then table.remove(TPData.recent) end
@@ -304,31 +560,33 @@ upL()
 -- ==========================================
 -- ЛОГИКА ОКНА (CLOSE & POSITION)
 -- ==========================================
-local function ToggleUI(vis)
-    MainFrame.Visible = vis
-    MiniButton.Visible = not vis
-    if not vis then 
-        MiniButton.Position = SavedMiniPos -- Возврат на сохраненное место
+
+function ToggleUI(vis) 
+    if vis then
+        -- ОТКРЫВАЕМ: Окно спавнится там, где стоит Кнопка
+        MainFrame.Position = MiniButton.Position
+        MainFrame.Visible = true
+        MiniButton.Visible = false
+    else
+        -- ЗАКРЫВАЕМ: Кнопка спавнится там, где стоит Окно
+        MiniButton.Position = MainFrame.Position
+        MainFrame.Visible = false
+        MiniButton.Visible = true
     end
 end
 
--- ЛОГИКА "X" (DEACTIVATE EVERYTHING)
+-- ЛОГИКА "X"
 CloseBtn.MouseButton1Click:Connect(function()
-    -- 1. Disable Noclip
     if noclipConn then noclipConn:Disconnect() end
-    -- 2. Disable Click TP
     _G.ClickTPEnabled = false
-    -- 3. Disable Infinite Jump
-    _G.InfJumpEnabled = false
-    -- 4. Hide Fly GUI
     local fly = Player.PlayerGui:FindFirstChild("FlyGui") or Player.PlayerGui:FindFirstChild("main")
     if fly then fly.Enabled = false end
-    
-    -- 5. Destroy HUB
     ScreenGui:Destroy()
 end)
 
-MinBtn.MouseButton1Click:Connect(function() ToggleUI(false) end)
+MinBtn.MouseButton1Click:Connect(function()
+    ToggleUI(false)
+end)
 
 local dragging = false
 local dragStart, startPos
@@ -342,7 +600,7 @@ MiniButton.InputBegan:Connect(function(input)
         startPos = MiniButton.Position
         tapStartTime = tick()
         tapStartPos = Vector2.new(input.Position.X, input.Position.Y)
-
+        
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -356,7 +614,6 @@ MiniButton.InputChanged:Connect(function(input)
         local delta = input.Position - dragStart
         local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         MiniButton.Position = newPos
-        SavedMiniPos = newPos -- ЗАПОМИНАЕМ НОВУЮ ПОЗИЦИЮ
     end
 end)
 
@@ -368,8 +625,6 @@ MiniButton.InputEnded:Connect(function(input)
         
         if duration < 0.15 and dist < 5 then
             ToggleUI(true)
-        else
-            SavedMiniPos = MiniButton.Position -- Сохраняем после перетаскивания
         end
     end
 end)
