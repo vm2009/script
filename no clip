@@ -1,0 +1,67 @@
+--[[
+	УМНЫЙ NOCLIP (Вкл/Выкл) без мусора в консоли
+	
+	Как это работает:
+	1. Нажми "Execute" -> Noclip включится.
+	2. Нажми "Execute" снова -> Noclip полностью отключится и удалится из памяти.
+]]
+
+if _G.MyNoclipConnection then
+
+	-- ==========================================
+	-- ЭТАП 1: ВЫКЛЮЧЕНИЕ (ОЧИСТКА)
+	-- ==========================================
+
+	-- Останавливаем скрипт
+	_G.MyNoclipConnection:Disconnect()
+	
+	-- Стираем переменную (полное удаление)
+	_G.MyNoclipConnection = nil
+
+	-- Возвращаем коллизию (твердость) персонажу
+	local char = game.Players.LocalPlayer.Character
+	if char then
+		for _, v in pairs(char:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.CanCollide = true
+			end
+		end
+	end
+
+	-- Уведомление на экране (справа внизу)
+	game.StarterGui:SetCore("SendNotification", {
+		Title = "Script Status";
+		Text = "❌ Скрипт остановлен и выгружен.";
+		Duration = 2;
+	})
+
+else
+
+	-- ==========================================
+	-- ЭТАП 2: ВКЛЮЧЕНИЕ (ЗАПУСК)
+	-- ==========================================
+
+	local RunService = game:GetService('RunService')
+	local Plr = game.Players.LocalPlayer
+
+	local function NoclipLoop()
+		if Plr.Character then
+			for _, v in pairs(Plr.Character:GetDescendants()) do
+				if v:IsA('BasePart') and v.CanCollide then
+					v.CanCollide = false 
+				end
+			end
+		end
+	end
+
+	-- Запускаем и сохраняем связь
+	_G.MyNoclipConnection = RunService.Stepped:Connect(NoclipLoop)
+
+	-- Уведомление на экране (справа внизу)
+	game.StarterGui:SetCore("SendNotification", {
+		Title = "Script Status";
+		Text = "✅ Скрипт запущен!";
+		Duration = 2;
+	})
+
+end
