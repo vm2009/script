@@ -1,8 +1,8 @@
 --[[ 
-    UNIVERSAL YOUTH HUB [ANCHORED WINDOW]
-    - Window opens exactly where the MiniButton is located.
-    - MiniButton appears exactly where the Window was.
-    - F2 Logic: Switch (WeAreDevs Script)
+    UNIVERSAL YOUTH HUB [UNANCHORED / INDEPENDENT POSITIONS]
+    - Main Window and MiniButton have independent positions.
+    - Only one is visible at a time.
+    - All other logic preserved.
 ]] 
 
 local UserInputService = game:GetService("UserInputService")
@@ -41,7 +41,7 @@ end
 
 -- --- GUI SETUP ---
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "YouthHub_Anchored"
+ScreenGui.Name = "YouthHub_Fixed"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -49,12 +49,13 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 -- ГЛАВНОЕ ОКНО
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 520 * scale, 0, 360 * scale)
-MainFrame.Position = UDim2.new(0.5, -260 * scale, 0.5, -180 * scale) -- Начальная позиция
+MainFrame.Position = UDim2.new(0.5, -260 * scale, 0.5, -180 * scale) -- Центр экрана
 MainFrame.BackgroundColor3 = Theme.Bg
 MainFrame.BackgroundTransparency = 0.15
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Visible = true -- Сначала видим меню
 MainFrame.Parent = ScreenGui
 
 Instance.new("UICorner", MainFrame).CornerRadius = Theme.Corner
@@ -108,16 +109,16 @@ local MinBtn = mkWinBtn("-", Color3.fromRGB(220, 170, 40), -80)
 -- МИНИ КНОПКА
 local MiniButton = Instance.new("TextButton")
 MiniButton.Size = UDim2.new(0, 50 * scale, 0, 50 * scale)
-MiniButton.Position = UDim2.new(0.5, -25 * scale, 0.05, 0) -- Начальная позиция
+MiniButton.Position = UDim2.new(0.1, 0, 0.1, 0) -- Позиция кнопки отдельно
 MiniButton.BackgroundColor3 = Theme.Bg
 MiniButton.BackgroundTransparency = 0.2
 MiniButton.Text = "H"
 MiniButton.TextColor3 = Theme.Text
 MiniButton.Font = Enum.Font.GothamBlack
 MiniButton.TextSize = 24 * scale
-MiniButton.Visible = false
+MiniButton.Visible = false -- Сначала скрыта, так как меню открыто
 MiniButton.Active = true
-MiniButton.Draggable = false -- Мы используем свой драг-скрипт ниже
+MiniButton.Draggable = true -- Включаем стандартный драг, либо используем кастомный ниже
 MiniButton.Parent = ScreenGui
 Instance.new("UICorner", MiniButton).CornerRadius = UDim.new(0, 12)
 Instance.new("UIStroke", MiniButton).Color = Theme.Accent
@@ -353,7 +354,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
     elseif input.KeyCode == Enum.KeyCode.RightControl then
         local isVis = MainFrame.Visible
-        ToggleUI(not isVis)
+        -- Переключаем UI по правому Ctrl
+        if isVis then
+            MainFrame.Visible = false
+            MiniButton.Visible = true
+        else
+            MainFrame.Visible = true
+            MiniButton.Visible = false
+        end
     end
 end)
 
@@ -558,24 +566,25 @@ end)
 upL()
 
 -- ==========================================
--- ЛОГИКА ОКНА (CLOSE & POSITION)
+-- ЛОГИКА ОКНА (CLOSE & TOGGLE)
 -- ==========================================
 
-function ToggleUI(vis) 
-    if vis then
-        -- ОТКРЫВАЕМ: Окно спавнится там, где стоит Кнопка
-        MainFrame.Position = MiniButton.Position
+-- Главная функция переключения
+function ToggleUI(showMain) 
+    if showMain then
+        -- Показываем главное окно, скрываем кнопку
         MainFrame.Visible = true
         MiniButton.Visible = false
+        -- НЕ меняем позицию, они независимы
     else
-        -- ЗАКРЫВАЕМ: Кнопка спавнится там, где стоит Окно
-        MiniButton.Position = MainFrame.Position
+        -- Скрываем главное окно, показываем кнопку
         MainFrame.Visible = false
         MiniButton.Visible = true
+        -- НЕ меняем позицию
     end
 end
 
--- ЛОГИКА "X"
+-- ЛОГИКА "X" (Полное закрытие)
 CloseBtn.MouseButton1Click:Connect(function()
     if noclipConn then noclipConn:Disconnect() end
     _G.ClickTPEnabled = false
@@ -584,10 +593,12 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
+-- ЛОГИКА "-" (Свернуть)
 MinBtn.MouseButton1Click:Connect(function()
     ToggleUI(false)
 end)
 
+-- КАСТОМНЫЙ ДРАГ ДЛЯ МИНИ-КНОПКИ
 local dragging = false
 local dragStart, startPos
 local tapStartTime = 0
@@ -617,13 +628,15 @@ MiniButton.InputChanged:Connect(function(input)
     end
 end)
 
+-- Если нажатие было быстрым (не перетаскивание), то открываем меню
 MiniButton.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
         local duration = tick() - tapStartTime
         local dist = (Vector2.new(input.Position.X, input.Position.Y) - tapStartPos).Magnitude
         
-        if duration < 0.15 and dist < 5 then
+        -- Если клик быстрый и мышка почти не сдвинулась -> это Клик, а не Драг
+        if duration < 0.25 and dist < 10 then
             ToggleUI(true)
         end
     end
