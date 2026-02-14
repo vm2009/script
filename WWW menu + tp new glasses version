@@ -1,23 +1,221 @@
 --[[ 
-    UNIVERSAL YOUTH HUB [UNANCHORED / INDEPENDENT POSITIONS]
-    - Main Window and MiniButton have independent positions.
-    - Only one is visible at a time.
-    - All other logic preserved.
+    UNIVERSAL YOUTH HUB [EMBEDDED AIMBOT EDITION]
+    - Aimbot: Код Exunys встроен прямо в скрипт (работает без ссылок).
+    - FOV Slider: Работает.
+    - Toggle: Работает.
+    - ESP: Работает.
 ]] 
 
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
+
+-- ==============================================================================
+-- ВСТРОЕННЫЙ МОДУЛЬ AIMBOT (EXUNYS V3)
+-- ==============================================================================
+local function LoadAimbotModule()
+    --// Cache
+    local game, workspace = game, workspace
+    local getrawmetatable, getmetatable, setmetatable, pcall, getgenv, next, tick = getrawmetatable, getmetatable, setmetatable, pcall, getgenv, next, tick
+    local Vector2new, Vector3zero, CFramenew, Color3fromRGB, Color3fromHSV, Drawingnew, TweenInfonew = Vector2.new, Vector3.zero, CFrame.new, Color3.fromRGB, Color3.fromHSV, Drawing.new, TweenInfo.new
+    local getupvalue, mousemoverel, tablefind, tableremove, stringlower, stringsub, mathclamp = debug.getupvalue, mousemoverel or (Input and Input.MouseMove), table.find, table.remove, string.lower, string.sub, math.clamp
+
+    local GameMetatable = getrawmetatable and getrawmetatable(game) or {
+        __index = function(self, Index) return self[Index] end,
+        __newindex = function(self, Index, Value) self[Index] = Value end
+    }
+
+    local __index = GameMetatable.__index
+    local __newindex = GameMetatable.__newindex
+    local getrenderproperty, setrenderproperty = getrenderproperty or __index, setrenderproperty or __newindex
+    local GetService = __index(game, "GetService")
+
+    --// Services
+    local RunService = GetService(game, "RunService")
+    local UserInputService = GetService(game, "UserInputService")
+    local TweenService = GetService(game, "TweenService")
+    local Players = GetService(game, "Players")
+
+    --// Service Methods
+    local LocalPlayer = __index(Players, "LocalPlayer")
+    local Camera = __index(workspace, "CurrentCamera")
+    local FindFirstChild, FindFirstChildOfClass = __index(game, "FindFirstChild"), __index(game, "FindFirstChildOfClass")
+    local GetDescendants = __index(game, "GetDescendants")
+    local WorldToViewportPoint = __index(Camera, "WorldToViewportPoint")
+    local GetPartsObscuringTarget = __index(Camera, "GetPartsObscuringTarget")
+    local GetMouseLocation = __index(UserInputService, "GetMouseLocation")
+    local GetPlayers = __index(Players, "GetPlayers")
+
+    --// Variables
+    local RequiredDistance, Typing, Running, ServiceConnections, Animation, OriginalSensitivity = 2000, false, false, {}
+    local Connect, Disconnect = __index(game, "DescendantAdded").Connect
+
+    --// Checking for multiple processes
+    if getgenv().ExunysDeveloperAimbot and getgenv().ExunysDeveloperAimbot.Exit then
+        getgenv().ExunysDeveloperAimbot:Exit()
+    end
+
+    --// Environment
+    getgenv().ExunysDeveloperAimbot = {
+        DeveloperSettings = { UpdateMode = "RenderStepped", TeamCheckOption = "TeamColor", RainbowSpeed = 1 },
+        Settings = {
+            Enabled = false, -- Выключено по умолчанию
+            TeamCheck = false,
+            AliveCheck = true,
+            WallCheck = false,
+            OffsetToMoveDirection = false,
+            OffsetIncrement = 15,
+            Sensitivity = 0,
+            Sensitivity2 = 3.5,
+            LockMode = 1,
+            LockPart = "Head",
+            TriggerKey = Enum.UserInputType.MouseButton2,
+            Toggle = false
+        },
+        FOVSettings = {
+            Enabled = true,
+            Visible = false, -- Выключено по умолчанию
+            Radius = 90,
+            NumSides = 60,
+            Thickness = 1,
+            Transparency = 1,
+            Filled = false,
+            RainbowColor = false,
+            RainbowOutlineColor = false,
+            Color = Color3fromRGB(255, 255, 255),
+            OutlineColor = Color3fromRGB(0, 0, 0),
+            LockedColor = Color3fromRGB(255, 150, 150)
+        },
+        Blacklisted = {},
+        FOVCircleOutline = Drawingnew("Circle"),
+        FOVCircle = Drawingnew("Circle")
+    }
+
+    local Environment = getgenv().ExunysDeveloperAimbot
+    setrenderproperty(Environment.FOVCircle, "Visible", false)
+    setrenderproperty(Environment.FOVCircleOutline, "Visible", false)
+
+    --// Core Functions
+    local ConvertVector = function(Vector) return Vector2new(Vector.X, Vector.Y) end
+
+    local CancelLock = function()
+        Environment.Locked = nil
+        local FOVCircle = Environment.FOVCircle
+        setrenderproperty(FOVCircle, "Color", Environment.FOVSettings.Color)
+        __newindex(UserInputService, "MouseDeltaSensitivity", OriginalSensitivity)
+        if Animation then Animation:Cancel() end
+    end
+
+    local GetClosestPlayer = function()
+        local Settings = Environment.Settings
+        local LockPart = Settings.LockPart
+        if not Environment.Locked then
+            RequiredDistance = Environment.FOVSettings.Enabled and Environment.FOVSettings.Radius or 2000
+            for _, Value in next, GetPlayers(Players) do
+                local Character = __index(Value, "Character")
+                local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
+                if Value ~= LocalPlayer and not table.find(Environment.Blacklisted, __index(Value, "Name")) and Character and FindFirstChild(Character, LockPart) and Humanoid then
+                    local PartPosition = __index(Character[LockPart], "Position")
+                    if Settings.AliveCheck and __index(Humanoid, "Health") <= 0 then continue end
+                    local Vector, OnScreen, Distance = WorldToViewportPoint(Camera, PartPosition)
+                    Vector = ConvertVector(Vector)
+                    Distance = (GetMouseLocation(UserInputService) - Vector).Magnitude
+                    if Distance < RequiredDistance and OnScreen then
+                        RequiredDistance, Environment.Locked = Distance, Value
+                    end
+                end
+            end
+        elseif (GetMouseLocation(UserInputService) - ConvertVector(WorldToViewportPoint(Camera, __index(__index(__index(Environment.Locked, "Character"), LockPart), "Position")))).Magnitude > RequiredDistance then
+            CancelLock()
+        end
+    end
+
+    local Load = function()
+        OriginalSensitivity = __index(UserInputService, "MouseDeltaSensitivity")
+        local Settings, FOVCircle, FOVCircleOutline, FOVSettings = Environment.Settings, Environment.FOVCircle, Environment.FOVCircleOutline, Environment.FOVSettings
+
+        ServiceConnections.RenderSteppedConnection = Connect(__index(RunService, Environment.DeveloperSettings.UpdateMode), function()
+            if FOVSettings.Enabled and Settings.Enabled and FOVSettings.Visible then
+                setrenderproperty(FOVCircle, "Radius", FOVSettings.Radius)
+                setrenderproperty(FOVCircleOutline, "Radius", FOVSettings.Radius)
+                setrenderproperty(FOVCircle, "Position", GetMouseLocation(UserInputService))
+                setrenderproperty(FOVCircleOutline, "Position", GetMouseLocation(UserInputService))
+                setrenderproperty(FOVCircle, "Visible", true)
+                setrenderproperty(FOVCircleOutline, "Visible", true)
+            else
+                setrenderproperty(FOVCircle, "Visible", false)
+                setrenderproperty(FOVCircleOutline, "Visible", false)
+            end
+
+            if Running and Settings.Enabled then
+                GetClosestPlayer()
+                if Environment.Locked then
+                    local LockedPosition_Vector3 = __index(__index(Environment.Locked, "Character")[Environment.Settings.LockPart], "Position")
+                    local LockedPosition = WorldToViewportPoint(Camera, LockedPosition_Vector3)
+                    mousemoverel((LockedPosition.X - GetMouseLocation(UserInputService).X) / Settings.Sensitivity2, (LockedPosition.Y - GetMouseLocation(UserInputService).Y) / Settings.Sensitivity2)
+                    setrenderproperty(FOVCircle, "Color", FOVSettings.LockedColor)
+                end
+            end
+        end)
+
+        ServiceConnections.InputBeganConnection = Connect(__index(UserInputService, "InputBegan"), function(Input)
+            if Typing then return end
+            if Input.UserInputType == Enum.UserInputType.Keyboard and Input.KeyCode == Settings.TriggerKey or Input.UserInputType == Settings.TriggerKey then
+                Running = true
+            end
+        end)
+
+        ServiceConnections.InputEndedConnection = Connect(__index(UserInputService, "InputEnded"), function(Input)
+            if Typing then return end
+            if Input.UserInputType == Enum.UserInputType.Keyboard and Input.KeyCode == Settings.TriggerKey or Input.UserInputType == Settings.TriggerKey then
+                Running = false
+                CancelLock()
+            end
+        end)
+    end
+
+    ServiceConnections.TypingStartedConnection = Connect(__index(UserInputService, "TextBoxFocused"), function() Typing = true end)
+    ServiceConnections.TypingEndedConnection = Connect(__index(UserInputService, "TextBoxFocusReleased"), function() Typing = false end)
+
+    function Environment.Exit(self)
+        for Index, _ in next, ServiceConnections do
+            Disconnect(ServiceConnections[Index])
+        end
+        self.FOVCircle:Remove()
+        self.FOVCircleOutline:Remove()
+        getgenv().ExunysDeveloperAimbot = nil
+    end
+
+    Environment.Load = Load
+    return Environment
+end
+
+-- Инициализация Аимбота
+local Aimbot = LoadAimbotModule()
+Aimbot.Load() -- Запускаем слушатели, но настройки Enabled = false
+
+-- ==============================================================================
+-- ОСНОВНОЙ СКРИПТ ХАБА
+-- ==============================================================================
 
 -- --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
 _G.ClickTPEnabled = false
 local noclipConn = nil
 local flyLoaded = false
-local isFlyActive = false
-local isNoclipActive = false
+
+-- --- ФУНКЦИЯ БЕЗОПАСНОЙ ЗАГРУЗКИ ---
+local function SafeLoad(url)
+    local success, result = pcall(function() return game:HttpGet(url) end)
+    if not success then return nil end
+    local func, err = loadstring(result)
+    if not func then return nil end
+    return func()
+end
 
 -- --- НАСТРОЙКИ ---
 local isMobile = UserInputService.TouchEnabled
@@ -30,7 +228,6 @@ local Theme = {
     Corner = UDim.new(0, 9)
 }
 
--- --- ФУНКЦИЯ ЭКЗЕКУТОРА ---
 local function getExecutor()
     if identifyexecutor then return identifyexecutor() end
     if getexecutorname then return getexecutorname() end
@@ -41,21 +238,21 @@ end
 
 -- --- GUI SETUP ---
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "YouthHub_Fixed"
+ScreenGui.Name = "YouthHub_AimbotEd"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- ГЛАВНОЕ ОКНО
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 520 * scale, 0, 360 * scale)
-MainFrame.Position = UDim2.new(0.5, -260 * scale, 0.5, -180 * scale) -- Центр экрана
+MainFrame.Size = UDim2.new(0, 550 * scale, 0, 380 * scale)
+MainFrame.Position = UDim2.new(0.5, -275 * scale, 0.5, -190 * scale)
 MainFrame.BackgroundColor3 = Theme.Bg
 MainFrame.BackgroundTransparency = 0.15
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = true -- Сначала видим меню
+MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
 Instance.new("UICorner", MainFrame).CornerRadius = Theme.Corner
@@ -109,21 +306,21 @@ local MinBtn = mkWinBtn("-", Color3.fromRGB(220, 170, 40), -80)
 -- МИНИ КНОПКА
 local MiniButton = Instance.new("TextButton")
 MiniButton.Size = UDim2.new(0, 50 * scale, 0, 50 * scale)
-MiniButton.Position = UDim2.new(0.1, 0, 0.1, 0) -- Позиция кнопки отдельно
+MiniButton.Position = UDim2.new(0.1, 0, 0.1, 0)
 MiniButton.BackgroundColor3 = Theme.Bg
 MiniButton.BackgroundTransparency = 0.2
 MiniButton.Text = "H"
 MiniButton.TextColor3 = Theme.Text
 MiniButton.Font = Enum.Font.GothamBlack
 MiniButton.TextSize = 24 * scale
-MiniButton.Visible = false -- Сначала скрыта, так как меню открыто
+MiniButton.Visible = false
 MiniButton.Active = true
-MiniButton.Draggable = true -- Включаем стандартный драг, либо используем кастомный ниже
+MiniButton.Draggable = true
 MiniButton.Parent = ScreenGui
 Instance.new("UICorner", MiniButton).CornerRadius = UDim.new(0, 12)
 Instance.new("UIStroke", MiniButton).Color = Theme.Accent
 
--- --- ВКЛАДКИ ---
+-- --- СИСТЕМА ВКЛАДОК ---
 local SideBar = Instance.new("Frame", MainFrame)
 SideBar.Size = UDim2.new(0, 140 * scale, 1, -40 * scale); 
 SideBar.Position = UDim2.new(0, 0, 0, 40 * scale); 
@@ -153,11 +350,11 @@ end
 
 local function CreateTab(txt, ord)
     local b = Instance.new("TextButton", SideBar)
-    b.Size = UDim2.new(0.9, 0, 0, 45 * scale); 
-    b.Position = UDim2.new(0.05, 0, 0, 10 * scale + (ord * 50 * scale))
+    b.Size = UDim2.new(0.9, 0, 0, 40 * scale); 
+    b.Position = UDim2.new(0.05, 0, 0, 10 * scale + (ord * 45 * scale))
     b.Text = txt; 
     b.Font = Enum.Font.GothamBold; 
-    b.TextSize = 14 * scale; 
+    b.TextSize = 13 * scale; 
     b.AutoButtonColor = false
     b.BackgroundColor3 = Theme.Element; 
     b.BackgroundTransparency = 0.8
@@ -174,7 +371,7 @@ local function CreateTab(txt, ord)
 end
 
 -- ==========================================
--- PAGE 1: MAIN
+-- TAB 1: MAIN
 -- ==========================================
 local P_Main = CreateTab("Main", 0)
 
@@ -211,23 +408,21 @@ ExecFrame.BackgroundTransparency = 0.4
 Instance.new("UICorner", ExecFrame).CornerRadius = UDim.new(0, 6); 
 Instance.new("UIStroke", ExecFrame).Color = Theme.Accent; 
 Instance.new("UIStroke", ExecFrame).Transparency = 0.5
-
 local ExecLbl = mkLbl(getExecutor(), 14, UDim2.new(0,0,0.15,0), Theme.Text, Enum.Font.GothamBold); 
 ExecLbl.Parent = ExecFrame
 
 -- ==========================================
--- PAGE 2: MENU
+-- TAB 2: MENU (Scripts)
 -- ==========================================
 local P_Menu = CreateTab("Menu", 1)
-
 local MenuList = Instance.new("Frame", P_Menu); 
 MenuList.Size = UDim2.new(1, -10 * scale, 1, -10 * scale); 
 MenuList.Position = UDim2.new(0, 5 * scale, 0, 5 * scale); 
 MenuList.BackgroundTransparency = 1
 Instance.new("UIListLayout", MenuList).Padding = UDim.new(0, 8)
 
-local function AddBtn(txt, cb, tog)
-    local f = Instance.new("Frame", MenuList); 
+local function AddBtn(parent, txt, cb, tog)
+    local f = Instance.new("Frame", parent); 
     f.Size = UDim2.new(1, 0, 0, 42 * scale); 
     f.BackgroundColor3 = Theme.Element; 
     f.BackgroundTransparency = 0.4; 
@@ -270,25 +465,15 @@ local function AddBtn(txt, cb, tog)
         up()
         cb(st)
     end)
-
     return {
-        toggle = function()
-            if tog then st = not st end
-            up()
-            cb(st)
-        end,
-        setState = function(val)
-            st=val
-            up()
-        end
+        toggle = function() if tog then st = not st end up() cb(st) end
     }
 end
 
--- LOGIC FUNCTIONS
+-- LOGIC --
 local function toggleFlyLogic(state)
-    isFlyActive = state
     if state and not flyLoaded then
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
+        SafeLoad("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt")
         flyLoaded = true
     end
     local g = Player.PlayerGui:FindFirstChild("FlyGui") or Player.PlayerGui:FindFirstChild("main")
@@ -296,79 +481,40 @@ local function toggleFlyLogic(state)
 end
 
 local function toggleNoclipLogic(state)
-    isNoclipActive = state
-    if state then
-        noclipConn = RunService.Stepped:Connect(function()
-            if Player.Character then
-                for _,v in pairs(Player.Character:GetDescendants()) do
-                    if v:IsA("BasePart") then v.CanCollide = false end
-                end
-            end
-        end)
-    else
-        if noclipConn then noclipConn:Disconnect() end
+    SafeLoad("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/no%20clip")
+end
+
+local FlyBtn = AddBtn(MenuList, "Fly GUI (F1)", toggleFlyLogic, true)
+local JumpBtn = AddBtn(MenuList, "Infinite Jump (F2)", function() SafeLoad("https://obj.wearedevs.net/2/scripts/Infinite%20Jump.lua") end, true) 
+local TpBtn = AddBtn(MenuList, "Ctrl+Click TP (F3)", function(s) _G.ClickTPEnabled = s end, true)
+local NcBtn = AddBtn(MenuList, "Noclip (F4)", toggleNoclipLogic, true)
+AddBtn(MenuList, "Script #001 (F5)", function() SafeLoad("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001") end, false)
+AddBtn(MenuList, "Infinite Yield (F6)", function() SafeLoad("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source") end, false)
+
+-- Hotkeys
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.F1 then FlyBtn.toggle()
+    elseif input.KeyCode == Enum.KeyCode.F2 then JumpBtn.toggle() 
+    elseif input.KeyCode == Enum.KeyCode.F3 then TpBtn.toggle()
+    elseif input.KeyCode == Enum.KeyCode.F4 then NcBtn.toggle()
+    elseif input.KeyCode == Enum.KeyCode.F5 then SafeLoad("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001")
+    elseif input.KeyCode == Enum.KeyCode.F6 then SafeLoad("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
+    elseif input.KeyCode == Enum.KeyCode.RightControl then ToggleUI(not MainFrame.Visible)
     end
-end
-
--- ЛОГИКА INF JUMP (WeAreDevs script)
-local function toggleInfJumpLogic(state)
-    loadstring(game:HttpGet("https://obj.wearedevs.net/2/scripts/Infinite%20Jump.lua"))()
-end
-
--- Click TP Logic
+end)
 UserInputService.InputBegan:Connect(function(i,g)
     if not g and _G.ClickTPEnabled and i.UserInputType == Enum.UserInputType.MouseButton1 then
         if (isMobile or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)) then
-            Player.Character:MoveTo(Mouse.Hit.p)
-        end
-    end
-end)
-
--- BUTTON CREATION
-local FlyBtn = AddBtn("Fly GUI (F1)", toggleFlyLogic, true)
-local JumpBtn = AddBtn("Infinite Jump (F2)", toggleInfJumpLogic, true) 
-local TpBtn = AddBtn("Ctrl+Click TP (F3)", function(s) _G.ClickTPEnabled = s end, true)
-local NcBtn = AddBtn("Noclip (F4)", toggleNoclipLogic, true)
-local Sc1Btn = AddBtn("Script #001 (F5)", function() 
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))() 
-end, false)
-local IyBtn = AddBtn("Infinite Yield (F6)", function() 
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))() 
-end, false)
-
--- ГОРЯЧИЕ КЛАВИШИ
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.F1 then
-        FlyBtn.toggle()
-    elseif input.KeyCode == Enum.KeyCode.F2 then
-        JumpBtn.toggle() 
-    elseif input.KeyCode == Enum.KeyCode.F3 then
-        TpBtn.toggle()
-    elseif input.KeyCode == Enum.KeyCode.F4 then
-        NcBtn.toggle()
-    elseif input.KeyCode == Enum.KeyCode.F5 then
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/vm2009/script/refs/heads/main/SCRIPT%23001", true))()
-    elseif input.KeyCode == Enum.KeyCode.F6 then
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
-    elseif input.KeyCode == Enum.KeyCode.RightControl then
-        local isVis = MainFrame.Visible
-        -- Переключаем UI по правому Ctrl
-        if isVis then
-            MainFrame.Visible = false
-            MiniButton.Visible = true
-        else
-            MainFrame.Visible = true
-            MiniButton.Visible = false
+            if Player.Character then Player.Character:MoveTo(Mouse.Hit.p) end
         end
     end
 end)
 
 -- ==========================================
--- PAGE 3: TELEPORTER
+-- TAB 3: TELEPORTER (Coords)
 -- ==========================================
-local P_TP = CreateTab("Teleporter", 2)
+local P_TP = CreateTab("Teleporter", 2) 
 local TPData = {saved={}, recent={}}
 local FNAME = "GlassHub_Ult.json"
 
@@ -566,39 +712,313 @@ end)
 upL()
 
 -- ==========================================
--- ЛОГИКА ОКНА (CLOSE & TOGGLE)
+-- TAB 4: TP PLAYER
 -- ==========================================
+local P_PlrTP = CreateTab("TP Player", 3)
 
--- Главная функция переключения
-function ToggleUI(showMain) 
-    if showMain then
-        -- Показываем главное окно, скрываем кнопку
-        MainFrame.Visible = true
-        MiniButton.Visible = false
-        -- НЕ меняем позицию, они независимы
+local RefreshBtn = Instance.new("TextButton", P_PlrTP)
+RefreshBtn.Size = UDim2.new(1, -20, 0, 30)
+RefreshBtn.Position = UDim2.new(0, 10, 0, 5)
+RefreshBtn.BackgroundColor3 = Theme.Accent
+RefreshBtn.Text = "REFRESH LIST"
+RefreshBtn.TextColor3 = Color3.new(1,1,1)
+RefreshBtn.Font = Enum.Font.GothamBold
+RefreshBtn.TextSize = 14
+Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0,6)
+
+local PlrList = Instance.new("ScrollingFrame", P_PlrTP)
+PlrList.Size = UDim2.new(1, -10, 1, -50)
+PlrList.Position = UDim2.new(0, 5, 0, 45)
+PlrList.BackgroundTransparency = 1
+PlrList.ScrollBarThickness = 4
+Instance.new("UIListLayout", PlrList).Padding = UDim.new(0, 5)
+
+local function UpdatePlayerList()
+    for _,v in pairs(PlrList:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= Player then
+            local f = Instance.new("Frame", PlrList)
+            f.Size = UDim2.new(1, -10, 0, 50)
+            f.BackgroundColor3 = Theme.Element
+            f.BackgroundTransparency = 0.3
+            Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
+            
+            -- Avatar
+            local icon = Instance.new("ImageLabel", f)
+            icon.Size = UDim2.new(0, 40, 0, 40)
+            icon.Position = UDim2.new(0, 5, 0, 5)
+            icon.BackgroundTransparency = 1
+            icon.Image = "rbxthumb://type=AvatarHeadShot&id="..p.UserId.."&w=150&h=150"
+            Instance.new("UICorner", icon).CornerRadius = UDim.new(1,0)
+            
+            -- DisplayName
+            local dn = Instance.new("TextLabel", f)
+            dn.Size = UDim2.new(0, 150, 0, 20)
+            dn.Position = UDim2.new(0, 55, 0, 5)
+            dn.BackgroundTransparency = 1
+            dn.Text = p.DisplayName
+            dn.TextColor3 = Color3.new(1,1,1)
+            dn.TextXAlignment = 0
+            dn.Font = Enum.Font.GothamBold
+            dn.TextSize = 14
+            
+            -- UserName
+            local un = Instance.new("TextLabel", f)
+            un.Size = UDim2.new(0, 150, 0, 20)
+            un.Position = UDim2.new(0, 55, 0, 25)
+            un.BackgroundTransparency = 1
+            un.Text = "@"..p.Name
+            un.TextColor3 = Color3.fromRGB(180,180,180)
+            un.TextXAlignment = 0
+            un.Font = Enum.Font.Gotham
+            un.TextSize = 12
+            
+            -- TP Button
+            local b = Instance.new("TextButton", f)
+            b.Size = UDim2.new(0, 60, 0, 30)
+            b.Position = UDim2.new(1, -70, 0.5, -15)
+            b.BackgroundColor3 = Theme.Accent
+            b.Text = "TP"
+            b.TextColor3 = Color3.new(1,1,1)
+            b.Font = Enum.Font.GothamBold
+            Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+            
+            b.MouseButton1Click:Connect(function()
+                if Player.Character and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    Player.Character:MoveTo(p.Character.HumanoidRootPart.Position)
+                end
+            end)
+        end
+    end
+end
+RefreshBtn.MouseButton1Click:Connect(UpdatePlayerList)
+UpdatePlayerList()
+
+-- ==========================================
+-- TAB 5: VISUALS (ESP & AIM)
+-- ==========================================
+local P_Visuals = CreateTab("Visuals", 4) 
+local VisList = Instance.new("Frame", P_Visuals)
+VisList.Size = UDim2.new(1, -10, 1, -10)
+VisList.Position = UDim2.new(0, 5, 0, 5)
+VisList.BackgroundTransparency = 1
+Instance.new("UIListLayout", VisList).Padding = UDim.new(0, 8)
+
+-- 1. CUSTOM ESP (NO EXTERNAL SCRIPT)
+local espLoop = nil
+local espFolder = Instance.new("Folder", CoreGui)
+espFolder.Name = "YouthHub_ESP"
+
+local function ClearESP()
+    espFolder:ClearAllChildren()
+end
+
+local function CreateHighlight(targetModel)
+    if targetModel == Player.Character then return end -- Не подсвечиваем себя
+    if espFolder:FindFirstChild(targetModel.Name) then return end -- Уже есть
+
+    local h = Instance.new("Highlight")
+    h.Name = targetModel.Name
+    h.Adornee = targetModel
+    h.FillColor = Color3.fromRGB(255, 0, 0)
+    h.OutlineColor = Color3.fromRGB(255, 255, 255)
+    h.FillTransparency = 0.5
+    h.OutlineTransparency = 0
+    h.Parent = espFolder
+    
+    -- Следим за удалением персонажа
+    targetModel.AncestryChanged:Connect(function(_, parent)
+        if not parent then h:Destroy() end
+    end)
+end
+
+local function toggleESP(state)
+    if state then
+        -- Initial fill
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character then CreateHighlight(p.Character) end
+        end
+        
+        -- Loop
+        espLoop = RunService.Stepped:Connect(function()
+            for _, p in pairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    CreateHighlight(p.Character)
+                end
+            end
+        end)
     else
-        -- Скрываем главное окно, показываем кнопку
-        MainFrame.Visible = false
-        MiniButton.Visible = true
-        -- НЕ меняем позицию
+        if espLoop then espLoop:Disconnect() espLoop = nil end
+        ClearESP()
     end
 end
 
--- ЛОГИКА "X" (Полное закрытие)
+AddBtn(VisList, "ESP (Toggle)", function(state)
+    toggleESP(state)
+end, true)
+
+-- ------------------------------
+-- AIMBOT SECTION (Exunys V3)
+-- ------------------------------
+local AimFrame = Instance.new("Frame", VisList)
+AimFrame.Size = UDim2.new(1, 0, 0, 140)
+AimFrame.BackgroundColor3 = Theme.Element
+AimFrame.BackgroundTransparency = 0.4
+Instance.new("UICorner", AimFrame).CornerRadius = UDim.new(0, 6)
+
+local AimTitle = Instance.new("TextLabel", AimFrame)
+AimTitle.Text = "Aimbot Settings (Exunys V3)"
+AimTitle.Size = UDim2.new(1,0,0,25)
+AimTitle.BackgroundTransparency = 1
+AimTitle.TextColor3 = Theme.Accent
+AimTitle.Font = Enum.Font.GothamBlack
+AimTitle.TextSize = 14
+
+-- Aimbot Toggle
+local AimTogBtn = Instance.new("TextButton", AimFrame)
+AimTogBtn.Size = UDim2.new(0, 80, 0, 25)
+AimTogBtn.Position = UDim2.new(0.05, 0, 0, 30)
+AimTogBtn.Text = "OFF"
+AimTogBtn.BackgroundColor3 = Color3.fromRGB(50,50,60)
+AimTogBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", AimTogBtn).CornerRadius = UDim.new(0,6)
+
+local aimOn = false
+AimTogBtn.MouseButton1Click:Connect(function()
+    aimOn = not aimOn
+    AimTogBtn.Text = aimOn and "ON" or "OFF"
+    AimTogBtn.BackgroundColor3 = aimOn and Theme.Accent or Color3.fromRGB(50,50,60)
+    
+    if Aimbot.Settings then
+        Aimbot.Settings.Enabled = aimOn
+        Aimbot.FOVSettings.Visible = aimOn
+        
+        -- Принудительное скрытие, если выключено (на всякий случай)
+        if not aimOn then
+            if Aimbot.FOVCircle then Aimbot.FOVCircle.Visible = false end
+            if Aimbot.FOVCircleOutline then Aimbot.FOVCircleOutline.Visible = false end
+        end
+    end
+end)
+
+-- Slider FOV
+local SliderTitle = Instance.new("TextLabel", AimFrame)
+SliderTitle.Text = "FOV Radius"
+SliderTitle.Size = UDim2.new(0,100,0,20)
+SliderTitle.Position = UDim2.new(0.05, 0, 0, 60)
+SliderTitle.BackgroundTransparency = 1
+SliderTitle.TextColor3 = Theme.Text
+SliderTitle.TextXAlignment = 0
+
+local SliderBg = Instance.new("Frame", AimFrame)
+SliderBg.Size = UDim2.new(0.9, 0, 0, 6)
+SliderBg.Position = UDim2.new(0.05, 0, 0, 85)
+SliderBg.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Instance.new("UICorner", SliderBg).CornerRadius = UDim.new(1,0)
+
+local SliderFill = Instance.new("Frame", SliderBg)
+SliderFill.Size = UDim2.new(0.2, 0, 1, 0)
+SliderFill.BackgroundColor3 = Theme.Accent
+Instance.new("UICorner", SliderFill).CornerRadius = UDim.new(1,0)
+
+local SliderBtn = Instance.new("TextButton", SliderBg)
+SliderBtn.Size = UDim2.new(1,0,1,0)
+SliderBtn.BackgroundTransparency = 1
+SliderBtn.Text = ""
+
+local sDragging = false
+SliderBtn.InputBegan:Connect(function(input) 
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then sDragging = true end 
+end)
+UserInputService.InputEnded:Connect(function(input) 
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then sDragging = false end 
+end)
+RunService.RenderStepped:Connect(function()
+    if sDragging and Aimbot and Aimbot.FOVSettings then
+        local pos = UserInputService:GetMouseLocation().X
+        local relPos = pos - SliderBg.AbsolutePosition.X
+        local percent = math.clamp(relPos / SliderBg.AbsoluteSize.X, 0, 1)
+        SliderFill.Size = UDim2.new(percent, 0, 1, 0)
+        local val = math.floor(percent * 500)
+        SliderTitle.Text = "FOV: " .. val
+        
+        Aimbot.FOVSettings.Radius = val
+    end
+end)
+
+-- Keybind
+local KeyBtn = Instance.new("TextButton", AimFrame)
+KeyBtn.Size = UDim2.new(0, 120, 0, 25)
+KeyBtn.Position = UDim2.new(0.05, 0, 0, 105)
+KeyBtn.BackgroundColor3 = Color3.fromRGB(60,60,70)
+KeyBtn.Text = "Key: RightMouse"
+KeyBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", KeyBtn).CornerRadius = UDim.new(0,6)
+
+local binding = false
+KeyBtn.MouseButton1Click:Connect(function()
+    KeyBtn.Text = "Press a key..."
+    binding = true
+end)
+UserInputService.InputBegan:Connect(function(input)
+    if binding then
+        if input.UserInputType == Enum.UserInputType.Keyboard or input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 then
+            binding = false
+            local keyName = input.KeyCode.Name
+            local keyVal = input.KeyCode
+            
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then 
+                keyName = "LeftMouse" 
+                keyVal = Enum.UserInputType.MouseButton1
+            end
+            if input.UserInputType == Enum.UserInputType.MouseButton2 then 
+                keyName = "RightMouse" 
+                keyVal = Enum.UserInputType.MouseButton2
+            end
+            
+            KeyBtn.Text = "Key: " .. keyName
+            
+            if Aimbot and Aimbot.Settings then
+                Aimbot.Settings.TriggerKey = keyVal
+            end
+        end
+    end
+end)
+
+-- ==========================================
+-- ЛОГИКА ОКНА (CLOSE & TOGGLE)
+-- ==========================================
+
+function ToggleUI(showMain) 
+    if showMain then
+        MainFrame.Visible = true
+        MiniButton.Visible = false
+    else
+        MainFrame.Visible = false
+        MiniButton.Visible = true
+    end
+end
+
 CloseBtn.MouseButton1Click:Connect(function()
     if noclipConn then noclipConn:Disconnect() end
     _G.ClickTPEnabled = false
+    -- Отключаем ESP
+    toggleESP(false)
+    -- Отключаем Аимбот
+    if Aimbot and Aimbot.Exit then
+        Aimbot:Exit()
+    end
+    
     local fly = Player.PlayerGui:FindFirstChild("FlyGui") or Player.PlayerGui:FindFirstChild("main")
     if fly then fly.Enabled = false end
     ScreenGui:Destroy()
 end)
 
--- ЛОГИКА "-" (Свернуть)
 MinBtn.MouseButton1Click:Connect(function()
     ToggleUI(false)
 end)
 
--- КАСТОМНЫЙ ДРАГ ДЛЯ МИНИ-КНОПКИ
 local dragging = false
 local dragStart, startPos
 local tapStartTime = 0
@@ -611,12 +1031,7 @@ MiniButton.InputBegan:Connect(function(input)
         startPos = MiniButton.Position
         tapStartTime = tick()
         tapStartPos = Vector2.new(input.Position.X, input.Position.Y)
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
     end
 end)
 
@@ -628,17 +1043,12 @@ MiniButton.InputChanged:Connect(function(input)
     end
 end)
 
--- Если нажатие было быстрым (не перетаскивание), то открываем меню
 MiniButton.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
         local duration = tick() - tapStartTime
         local dist = (Vector2.new(input.Position.X, input.Position.Y) - tapStartPos).Magnitude
-        
-        -- Если клик быстрый и мышка почти не сдвинулась -> это Клик, а не Драг
-        if duration < 0.25 and dist < 10 then
-            ToggleUI(true)
-        end
+        if duration < 0.25 and dist < 10 then ToggleUI(true) end
     end
 end)
 
