@@ -1,9 +1,8 @@
 --[[ 
-    UNIVERSAL YOUTH HUB [EMBEDDED AIMBOT EDITION]
-    - Aimbot: Код Exunys встроен прямо в скрипт (работает без ссылок).
-    - FOV Slider: Работает.
-    - Toggle: Работает.
-    - ESP: Работает.
+    UNIVERSAL YOUTH HUB [ULTIMATE PRO EDITION - FAST ESP]
+    - ESP Refresh Rate: Changed to 1 second (Ultra Fast).
+    - Aimbot: Smooth/Instant modes included.
+    - All other features preserved.
 ]] 
 
 local UserInputService = game:GetService("UserInputService")
@@ -64,13 +63,13 @@ local function LoadAimbotModule()
     getgenv().ExunysDeveloperAimbot = {
         DeveloperSettings = { UpdateMode = "RenderStepped", TeamCheckOption = "TeamColor", RainbowSpeed = 1 },
         Settings = {
-            Enabled = false, -- Выключено по умолчанию
+            Enabled = false, 
             TeamCheck = false,
             AliveCheck = true,
             WallCheck = false,
             OffsetToMoveDirection = false,
             OffsetIncrement = 15,
-            Sensitivity = 0,
+            Sensitivity = 0.2, -- 0.2 = Smooth (Default), 0 = Instant
             Sensitivity2 = 3.5,
             LockMode = 1,
             LockPart = "Head",
@@ -79,7 +78,7 @@ local function LoadAimbotModule()
         },
         FOVSettings = {
             Enabled = true,
-            Visible = false, -- Выключено по умолчанию
+            Visible = false, 
             Radius = 90,
             NumSides = 60,
             Thickness = 1,
@@ -156,8 +155,16 @@ local function LoadAimbotModule()
                 GetClosestPlayer()
                 if Environment.Locked then
                     local LockedPosition_Vector3 = __index(__index(Environment.Locked, "Character")[Environment.Settings.LockPart], "Position")
-                    local LockedPosition = WorldToViewportPoint(Camera, LockedPosition_Vector3)
-                    mousemoverel((LockedPosition.X - GetMouseLocation(UserInputService).X) / Settings.Sensitivity2, (LockedPosition.Y - GetMouseLocation(UserInputService).Y) / Settings.Sensitivity2)
+                    
+                    if Settings.Sensitivity > 0 then
+                        -- Smooth
+                        Animation = TweenService:Create(Camera, TweenInfonew(Settings.Sensitivity, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = CFramenew(Camera.CFrame.Position, LockedPosition_Vector3)})
+                        Animation:Play()
+                    else
+                        -- Instant
+                        Camera.CFrame = CFramenew(Camera.CFrame.Position, LockedPosition_Vector3)
+                    end
+                    
                     setrenderproperty(FOVCircle, "Color", FOVSettings.LockedColor)
                 end
             end
@@ -197,7 +204,7 @@ end
 
 -- Инициализация Аимбота
 local Aimbot = LoadAimbotModule()
-Aimbot.Load() -- Запускаем слушатели, но настройки Enabled = false
+Aimbot.Load() -- Запускаем слушатели
 
 -- ==============================================================================
 -- ОСНОВНОЙ СКРИПТ ХАБА
@@ -205,6 +212,7 @@ Aimbot.Load() -- Запускаем слушатели, но настройки 
 
 -- --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
 _G.ClickTPEnabled = false
+_G.ESPEnabled = false
 local noclipConn = nil
 local flyLoaded = false
 
@@ -238,7 +246,7 @@ end
 
 -- --- GUI SETUP ---
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "YouthHub_AimbotEd"
+ScreenGui.Name = "YouthHub_UltPro"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -805,18 +813,18 @@ VisList.Position = UDim2.new(0, 5, 0, 5)
 VisList.BackgroundTransparency = 1
 Instance.new("UIListLayout", VisList).Padding = UDim.new(0, 8)
 
--- 1. CUSTOM ESP (NO EXTERNAL SCRIPT)
-local espLoop = nil
+-- 1. CUSTOM ESP (Highlight with Auto-Refresh)
 local espFolder = Instance.new("Folder", CoreGui)
 espFolder.Name = "YouthHub_ESP"
 
 local function ClearESP()
+    _G.ESPEnabled = false
     espFolder:ClearAllChildren()
 end
 
 local function CreateHighlight(targetModel)
-    if targetModel == Player.Character then return end -- Не подсвечиваем себя
-    if espFolder:FindFirstChild(targetModel.Name) then return end -- Уже есть
+    if targetModel == Player.Character then return end
+    if espFolder:FindFirstChild(targetModel.Name) then return end
 
     local h = Instance.new("Highlight")
     h.Name = targetModel.Name
@@ -827,29 +835,31 @@ local function CreateHighlight(targetModel)
     h.OutlineTransparency = 0
     h.Parent = espFolder
     
-    -- Следим за удалением персонажа
     targetModel.AncestryChanged:Connect(function(_, parent)
         if not parent then h:Destroy() end
     end)
 end
 
 local function toggleESP(state)
+    _G.ESPEnabled = state
     if state then
-        -- Initial fill
+        -- Первый запуск
         for _, p in pairs(Players:GetPlayers()) do
             if p.Character then CreateHighlight(p.Character) end
         end
         
-        -- Loop
-        espLoop = RunService.Stepped:Connect(function()
-            for _, p in pairs(Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                    CreateHighlight(p.Character)
+        -- Цикл обновления каждые 1 секунду (для новых игроков)
+        task.spawn(function()
+            while _G.ESPEnabled do
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        CreateHighlight(p.Character)
+                    end
                 end
+                task.wait(1) -- Обновление каждые 1 секунду
             end
         end)
     else
-        if espLoop then espLoop:Disconnect() espLoop = nil end
         ClearESP()
     end
 end
@@ -886,19 +896,41 @@ Instance.new("UICorner", AimTogBtn).CornerRadius = UDim.new(0,6)
 
 local aimOn = false
 AimTogBtn.MouseButton1Click:Connect(function()
+    if not Aimbot.Settings then return end
+    
     aimOn = not aimOn
     AimTogBtn.Text = aimOn and "ON" or "OFF"
     AimTogBtn.BackgroundColor3 = aimOn and Theme.Accent or Color3.fromRGB(50,50,60)
     
-    if Aimbot.Settings then
-        Aimbot.Settings.Enabled = aimOn
-        Aimbot.FOVSettings.Visible = aimOn
-        
-        -- Принудительное скрытие, если выключено (на всякий случай)
-        if not aimOn then
-            if Aimbot.FOVCircle then Aimbot.FOVCircle.Visible = false end
-            if Aimbot.FOVCircleOutline then Aimbot.FOVCircleOutline.Visible = false end
-        end
+    Aimbot.Settings.Enabled = aimOn
+    Aimbot.FOVSettings.Visible = aimOn
+    
+    if not aimOn then
+        if Aimbot.FOVCircle then Aimbot.FOVCircle.Visible = false end
+        if Aimbot.FOVCircleOutline then Aimbot.FOVCircleOutline.Visible = false end
+    end
+end)
+
+-- Aimbot Mode (Smooth vs Instant)
+local ModeBtn = Instance.new("TextButton", AimFrame)
+ModeBtn.Size = UDim2.new(0, 140, 0, 25)
+ModeBtn.Position = UDim2.new(0.45, 0, 0, 30)
+ModeBtn.Text = "MODE: SMOOTH"
+ModeBtn.BackgroundColor3 = Color3.fromRGB(60,60,70)
+ModeBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", ModeBtn).CornerRadius = UDim.new(0,6)
+
+local isInstant = false
+ModeBtn.MouseButton1Click:Connect(function()
+    isInstant = not isInstant
+    if isInstant then
+        ModeBtn.Text = "MODE: INSTANT"
+        ModeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Красный для агрессивного режима
+        if Aimbot.Settings then Aimbot.Settings.Sensitivity = 0 end -- 0 = Instant
+    else
+        ModeBtn.Text = "MODE: SMOOTH"
+        ModeBtn.BackgroundColor3 = Color3.fromRGB(60,60,70)
+        if Aimbot.Settings then Aimbot.Settings.Sensitivity = 0.2 end -- 0.2 = Smooth
     end
 end)
 
