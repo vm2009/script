@@ -1,4 +1,4 @@
---[
+--[[
     - FIXED: Syntax Error on Line 1.
     - FIXED: Smart Gui Parent (Supports Mobile Executors & PlayerGui Fallback).
 ]] 
